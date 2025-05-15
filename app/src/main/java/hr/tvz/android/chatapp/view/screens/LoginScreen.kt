@@ -1,6 +1,11 @@
 package hr.tvz.android.chatapp.view.screens
 
-import androidx.compose.foundation.background
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,13 +14,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -24,12 +33,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -38,9 +48,14 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import hr.tvz.android.chatapp.model.payload.request.LoginRequest
 import hr.tvz.android.chatapp.model.routes.Routes
 import hr.tvz.android.chatapp.viewmodel.AuthViewModel
+import hr.tvz.android.chatapp.R
+import hr.tvz.android.chatapp.view.components.AuthTextField
+import hr.tvz.android.chatapp.viewmodel.AuthState
 
 
 @Composable
@@ -51,17 +66,16 @@ fun LoginScreen(
     val context = LocalContext.current
     val email by authViewModel.email.collectAsState()
     val password by authViewModel.password.collectAsState()
+    val authViewState by authViewModel.authState.collectAsState()
 
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(Color.Gray)) { }
+    // ToDo: Replace Toasts with Popup screens
 
+    // Box(modifier = Modifier.fillMaxSize())
     Box(
         modifier = Modifier
             .padding(28.dp)
             .alpha(0.7f)
             .clip(CutCornerShape(10.dp))
-            .background(Color.White)
             .wrapContentHeight()
     ) {
         Column(
@@ -90,10 +104,33 @@ fun LoginScreen(
                 },
                 onSignUpClick = { navController.navigate(Routes.Register.route) }
             )
+            // GoogleSignInButton(authViewModel = authViewModel)
+
+            when (authViewState) {
+                is AuthState.Loading -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                is AuthState.LoggedIn -> {
+                    navController.navigate("movies/profile")
+                }
+
+                is AuthState.LoggedOut -> { }
+                is AuthState.Error -> {
+                    val error = (authViewState as AuthState.Error).errorResponse
+                    Toast.makeText(context,error, Toast.LENGTH_SHORT).show()
+                }
+
+                AuthState.RegistrationSuccess -> {}
+            }
         }
     }
-
-
 }
 
 
@@ -103,32 +140,12 @@ fun LoginHeader(headerString: String) {
         Text(
             text = headerString,
             fontSize = 26.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = Color.White
+            fontWeight = FontWeight.ExtraBold
         )
         Text(
             text = "Sign in to continue",
             fontSize = 18.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White
-        )
-    }
-}
-
-@Composable
-fun RegistrationHeader(headerString: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = headerString,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = Color.White
-        )
-        Text(
-            text = "Sign up to continue",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White
+            fontWeight = FontWeight.SemiBold
         )
     }
 }
@@ -146,13 +163,16 @@ fun LoginFields(
     errorLabelEmail: String
 ) {
     Column {
-        TextField(
+        AuthTextField(
             value = email,
             label = "Username",
             placeholder = "Enter your username",
             onValueChange = onEmailChange,
             leadingIcon = {
-                Icon(Icons.Default.AccountBox , contentDescription = "Email", tint = Color.White)
+                Icon(
+                    Icons.Default.AccountBox ,
+                    contentDescription = "Email"
+                )
             },
             keyboardOptions = KeyboardOptions(
                 imeAction = ImeAction.Next
@@ -160,10 +180,8 @@ fun LoginFields(
             isError = isErrorEmail,
             errorLabel = errorLabelEmail
         )
-
         Spacer(modifier = Modifier.height(10.dp))
-
-        TextField(
+        AuthTextField(
             value = password,
             label = "Password",
             placeholder = "Enter your password",
@@ -174,7 +192,10 @@ fun LoginFields(
                 imeAction = ImeAction.Go
             ),
             leadingIcon = {
-                Icon(Icons.Default.Lock, contentDescription = "Password", tint = Color.White)
+                Icon(
+                    Icons.Default.Lock,
+                    contentDescription = "Password"
+                )
             },
             isError = isErrorPassword,
             errorLabel = errorLabelPassword
@@ -196,7 +217,10 @@ fun LoginFooter(
     onSignUpClick: () -> Unit,
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Button(onClick = onSignInClick, modifier = Modifier.fillMaxWidth()) {
+        Button(
+            onClick = onSignInClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text(text = "Sign In")
         }
         TextButton(onClick = onSignUpClick) {
@@ -204,45 +228,5 @@ fun LoginFooter(
                 text = "Don't have an account? Sign up here."
             )
         }
-    }
-}
-
-@Composable
-fun TextField(
-    value: String,
-    label: String,
-    placeholder: String,
-    visualTransformation: VisualTransformation = VisualTransformation.None,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    leadingIcon: @Composable (() -> Unit)? = null,
-    trailingIcon: @Composable (() -> Unit)? = null,
-    onValueChange: (String) -> Unit,
-    isError: Boolean = false,
-    errorLabel: String = ""
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = {
-            Text(text = label)
-        },
-        placeholder = {
-            Text(text = placeholder)
-        },
-        visualTransformation = visualTransformation,
-        keyboardOptions = keyboardOptions,
-        leadingIcon = leadingIcon,
-        trailingIcon = trailingIcon,
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedBorderColor = Color.White,
-            focusedBorderColor = Color.White,
-            unfocusedTextColor = Color.White,
-            focusedTextColor = Color.White,
-        ),
-    )
-
-    if(isError && errorLabel.isNotEmpty()){
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(text = errorLabel, color = Color.Red, fontSize = 11.sp)
     }
 }

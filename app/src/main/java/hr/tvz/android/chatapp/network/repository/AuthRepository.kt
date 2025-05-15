@@ -1,5 +1,6 @@
 package hr.tvz.android.chatapp.network.repository;
 
+import hr.tvz.android.chatapp.model.payload.request.GoogleAuthRequest
 import hr.tvz.android.chatapp.model.payload.request.LoginRequest
 import hr.tvz.android.chatapp.model.payload.response.AuthResponse
 import hr.tvz.android.chatapp.model.payload.response.RegistrationRequest
@@ -47,7 +48,7 @@ class AuthRepository @Inject constructor(
         }.body()
     }
 
-    suspend fun loginWithGoogle(googleAuthRequest: Map<String, String>): AuthResponse {
+    suspend fun loginWithGoogle(googleAuthRequest: GoogleAuthRequest): AuthResponse {
         val response = httpClient.post("api/auth/google") {
             setBody(googleAuthRequest)
             contentType(ContentType.Application.Json)

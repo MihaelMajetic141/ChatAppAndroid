@@ -10,6 +10,9 @@ import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.tasks.Task
+import hr.tvz.android.chatapp.model.payload.request.GoogleAuthRequest
 import hr.tvz.android.chatapp.model.payload.response.AuthResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -87,6 +90,27 @@ class AuthViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 _authState.update { AuthState.Error(401, e.message.toString()) }
+            }
+        }
+    }
+
+    fun loginWithGoogle(
+        task: Task<GoogleSignInAccount>,
+        context: Context
+    ) {
+        viewModelScope.launch {
+            try {
+                val account = task.result
+                val idToken = account?.idToken
+                if (idToken != null) {
+                    val authResponse = authRepository.loginWithGoogle(GoogleAuthRequest(idToken))
+                    saveLoginResponseToDataStore(authResponse, DataStoreManager(context))
+                    Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
+                    _isUserLoggedIn.update { return@update true }
+                    _authState.update { return@update AuthState.LoggedIn }
+                }
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Google Sign-In failed: ${e.localizedMessage}")
             }
         }
     }

@@ -40,6 +40,7 @@ import hr.tvz.android.chatapp.view.screens.CreateContactScreen
 import hr.tvz.android.chatapp.view.screens.CreateGroupScreen
 import hr.tvz.android.chatapp.view.screens.LoginScreen
 import hr.tvz.android.chatapp.view.screens.NewConversationScreen
+import hr.tvz.android.chatapp.view.screens.RegistrationScreen
 import hr.tvz.android.chatapp.viewmodel.AuthViewModel
 
 @AndroidEntryPoint
@@ -127,17 +128,6 @@ private fun MainNavigation(
             )
         }
 
-        composable(
-            route = Routes.Chat.route + "/{chatId}",
-            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
-        ) {
-            val chatId = it.arguments?.getString("chatId") ?: ""
-            ChatScreen(
-                chatId = chatId,
-                navController = navController
-            )
-        }
-
         composable(route = Routes.CreateGroup.route) {
             CreateGroupScreen(
                 navController = navController,
@@ -150,13 +140,30 @@ private fun MainNavigation(
                 navController = navController,
                 topAppBarState = topAppBarState
             )
+        }
 
+        composable(
+            route = Routes.Chat.route + "/{chatId}",
+            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+        ) {
+            val chatId = it.arguments?.getString("chatId") ?: ""
+            ChatScreen(
+                chatId = chatId,
+                navController = navController
+            )
         }
 
         composable(route = Routes.Login.route) {
             LoginScreen(
                 navController,
                 authViewModel
+            )
+        }
+
+        composable(route = Routes.Register.route) {
+            RegistrationScreen(
+                navController = navController,
+                authViewModel = authViewModel
             )
         }
     }
