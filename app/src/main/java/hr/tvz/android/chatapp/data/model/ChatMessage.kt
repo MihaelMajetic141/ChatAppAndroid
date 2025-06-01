@@ -1,7 +1,8 @@
-package hr.tvz.android.chatapp.model
+package hr.tvz.android.chatapp.data.model
 
+import hr.tvz.android.chatapp.data.payload.InstantSerializer
 import kotlinx.serialization.Serializable
-import java.util.Date
+import java.time.Instant
 
 @Serializable
 data class ChatMessage(
@@ -12,6 +13,6 @@ data class ChatMessage(
     val mediaFileId: String? = null,
     val mediaFileType: String? = null,
     val replyTo: String? = null,
-    val timestamp: Date?,
+    @Serializable(with = InstantSerializer::class) val timestamp: Instant?,
     val reactions: Map<String, Int>? = null
 )

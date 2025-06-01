@@ -4,15 +4,15 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import hr.tvz.android.chatapp.model.Conversation
-import hr.tvz.android.chatapp.model.dto.ContactDTO
-import hr.tvz.android.chatapp.network.repository.ContactRepository
-import hr.tvz.android.chatapp.network.repository.ConversationRepository
-import hr.tvz.android.chatapp.network.repository.MediaRepository
+import hr.tvz.android.chatapp.data.dto.ContactDTO
+import hr.tvz.android.chatapp.network.repositories.ContactRepository
+import hr.tvz.android.chatapp.network.repositories.ConversationRepository
+import hr.tvz.android.chatapp.network.repositories.MediaRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
 import javax.inject.Inject
 
 
@@ -32,21 +32,20 @@ class NewConversationViewModel @Inject constructor(
     private val _createGroupViewState = MutableStateFlow<CreateGroupViewState>(CreateGroupViewState.Loading)
     val createGroupViewState = _createGroupViewState.asStateFlow()
 
-    private val _groupMembers = MutableStateFlow<List<ContactDTO>>(emptyList())
-    val groupMembers = _groupMembers.asStateFlow()
+    private val _selectedContacts = MutableStateFlow<List<ContactDTO>>(emptyList())
+    val selectedContacts = _selectedContacts.asStateFlow()
 
-    private val _groupName = MutableStateFlow<String>("")
+    private val _groupName = MutableStateFlow("")
     val groupName = _groupName.asStateFlow()
 
     private val _groupImageUri = MutableStateFlow<Uri>(Uri.EMPTY)
     val groupImageUri = _groupImageUri.asStateFlow()
 
-    fun getContacts() {
+    fun getContacts(currentUserId: String) {
         viewModelScope.launch {
             try {
                 _loadContactsViewState.update { LoadContactsViewState.Loading }
-                //ToDO: get userId from DataStore
-                val contacts = contactRepository.getContacts("userId")
+                val contacts = contactRepository.getUserContacts(currentUserId)
                 _loadContactsViewState.update {
                     LoadContactsViewState.Success(contacts)
                 }
@@ -58,6 +57,7 @@ class NewConversationViewModel @Inject constructor(
         }
     }
 
+    // ToDo: Delete later
     fun getAllUsers() {
         viewModelScope.launch {
             try {
@@ -89,11 +89,10 @@ class NewConversationViewModel @Inject constructor(
         }
     }
 
-    fun addContacts(contactIdList: List<String>, currentUserEmail: String) {
+    fun addContacts(contactIdList: List<String>, currentUserId: String) {
         viewModelScope.launch {
             try {
                 _createContactViewState.update { CreateContactViewState.Loading }
-                val currentUserId = contactRepository.getUserByEmail(currentUserEmail).userInfoId
                 contactIdList.forEach { contactRepository.newContact(it, currentUserId) }
                 _createContactViewState.update {
                     CreateContactViewState.Success
@@ -106,25 +105,27 @@ class NewConversationViewModel @Inject constructor(
         }
     }
 
-    fun newGroup(
-        groupName: String,
-        groupImage: Uri,
-        groupMemberIds: List<String>
-    ) {
+    fun createGroup(groupName: String, groupImage: Uri, groupMemberIds: List<String>,
+                    adminIds: List<String>) {
         viewModelScope.launch {
             try {
                 _createGroupViewState.update { CreateGroupViewState.Loading }
                 val imageFileId = mediaRepository.uploadMedia(groupImage)
-
-                //ToDO: current user is admin
-                val conversation = Conversation(
+                val conversation = hr.tvz.android.chatapp.data.model.Conversation(
+                    id = "",
                     name = groupName,
                     imageFileId = imageFileId,
                     memberIds = groupMemberIds,
-                    isDirectMessage = false
+                    isDirectMessage = false,
+                    description = "",
+                    inviteLink = "",
+                    adminIds = adminIds,
+                    createdAt = Instant.now(),
                 )
-                conversationRepository.createNewGroupChat(conversation)
-                _createGroupViewState.update { CreateGroupViewState.Success }
+                val newConversation = conversationRepository.createNewGroupChat(conversation)
+                _createGroupViewState.update {
+                    CreateGroupViewState.Success(newConversation.id ?: "")
+                }
             } catch (e: Exception) {
                 _createGroupViewState.update {
                     CreateGroupViewState.Error(e.message ?: "Error creating group")
@@ -145,6 +146,23 @@ class NewConversationViewModel @Inject constructor(
         }
     }
 
+    fun addContactToList(userId: String) {
+        viewModelScope.launch {
+            val contact = contactRepository.getContactByUserId(userId)
+            contact?.let {
+                val updatedList = _selectedContacts.value.toMutableList()
+                if (!updatedList.any { it.userInfoId == contact.userInfoId }) {
+                    updatedList.add(contact)
+                    _selectedContacts.value = updatedList
+                }
+            }
+        }
+    }
+    fun removeContactFromList(contactId: String) {
+        val updatedList = _selectedContacts.value.filterNot { it.userInfoId == contactId }
+        _selectedContacts.value = updatedList
+    }
+
     fun setGroupName(name: String) {
         _groupName.update { name }
     }
@@ -158,16 +176,14 @@ class NewConversationViewModel @Inject constructor(
     }
 
     fun validateGroupMembers(): Boolean {
-        return _groupMembers.value.size > 1
+        return _selectedContacts.value.size > 1
     }
 
 }
 
 sealed interface LoadContactsViewState {
     data object Loading : LoadContactsViewState
-    data class Success(
-        val contactList: List<ContactDTO> = emptyList()
-    ) : LoadContactsViewState
+    data class Success(val contactList: List<ContactDTO>) : LoadContactsViewState
     data class Error(val message: String) : LoadContactsViewState
 }
 
@@ -179,6 +195,6 @@ sealed interface CreateContactViewState {
 
 sealed interface CreateGroupViewState {
     data object Loading : CreateGroupViewState
-    data object Success : CreateGroupViewState //ToDo: add conversation id as parameter
+    data class Success(val groupId: String) : CreateGroupViewState
     data class Error(val message: String) : CreateGroupViewState
 }

@@ -4,16 +4,28 @@ import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.rounded.AddCircle
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -22,6 +34,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -29,10 +42,11 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dagger.hilt.android.AndroidEntryPoint
-import hr.tvz.android.chatapp.model.routes.Routes
+import hr.tvz.android.chatapp.data.routes.Routes
 import hr.tvz.android.chatapp.ui.theme.ChatAppTheme
 import hr.tvz.android.chatapp.view.screens.ChatListScreen
 import hr.tvz.android.chatapp.view.screens.ChatScreen
@@ -54,35 +68,16 @@ class MainActivity : ComponentActivity() {
         setContent {
             ChatAppTheme {
                 val topAppBarState = remember { mutableStateOf(TopAppBarState()) }
-                val navController = rememberNavController()
                 val authViewModel: AuthViewModel = hiltViewModel()
-
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.padding(bottom = 56.dp),
-                    content = { NavBarItems(navController = navController) }
-                )
+                val navController = rememberNavController()
 
                 Scaffold(
                     topBar = {
                         TopAppBar(
-                            title = { topAppBarState.value.title },
-                            navigationIcon = { topAppBarState.value.navigationIcon },
-                            actions = { topAppBarState.value.actions },
+                            title = { topAppBarState.value.title() },
+                            navigationIcon = { topAppBarState.value.navigationIcon() },
+                            actions = { topAppBarState.value.actions() },
                         )
-                    },
-                    floatingActionButton = {
-                        IconButton(
-                            onClick = { /* TODO: Open create group screen */ },
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.AddCircle,
-                                contentDescription = "New conversation",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
                     },
                     content = {
                         MainNavigation(
@@ -91,13 +86,22 @@ class MainActivity : ComponentActivity() {
                             navController = navController
                         )
                     },
+                    bottomBar = {
+                        BottomAppBar {
+                            BottomNavItem.items.listIterator().forEach { item ->
+                                NavigationBarItem(
+                                    selected = navController.currentBackStackEntryAsState()
+                                        .value?.destination?.route == item.route,
+                                    onClick = {
+                                        navController.navigate(item.route) { popUpTo(0) }
+                                    },
+                                    icon = { Icon(item.icon, contentDescription = item.label) },
+                                    label = { Text(item.label) }
+                                )
+                            }
+                        }
+                    }
                 )
-//                Surface(
-//                    modifier = Modifier.fillMaxSize(),
-//                    color = MaterialTheme.colorScheme.background
-//                ) {
-//                    MainNavigation()
-//                }
             }
         }
     }
@@ -169,26 +173,18 @@ private fun MainNavigation(
     }
 }
 
-@Composable
-fun NavBarItems(
-    navController: NavController,
-) {
-    IconButton(
-        onClick = { navController.navigate(Routes.Home.route) { popUpTo(0) } }
-    ) {
-        Icon(Icons.Default.Home, contentDescription = "Home")
-        Text("Home")
-    }
-    IconButton(
-        onClick = { navController.navigate(Routes.Login.route) }
-    ) {
-        Icon(Icons.Default.Home, contentDescription = "Login")
-        Text("Login")
-    }
-}
-
 data class TopAppBarState(
     val title: @Composable () -> Unit = {},
     val navigationIcon: @Composable () -> Unit = {},
     val actions: @Composable () -> Unit = {}
 )
+
+sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
+    data object Home : BottomNavItem(Routes.Home.route, Icons.Default.Home, "Home")
+    data object New : BottomNavItem(Routes.NewConversation.route, Icons.Default.AddCircle, "New Chat")
+    data object SignIn : BottomNavItem(Routes.Login.route, Icons.Default.AccountCircle, "Profile")
+
+    companion object {
+        val items = listOf(Home, New, SignIn)
+    }
+}

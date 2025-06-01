@@ -3,8 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("dagger.hilt.android.plugin")
-//     id("kotlin-kapt")
     id("com.google.devtools.ksp")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -19,6 +19,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(type = "String", name = "SERVER_IP", value = "\"${project.findProperty("SERVER_IP")}\"")
     }
 
     buildTypes {
@@ -39,6 +41,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -80,9 +83,10 @@ dependencies {
     implementation ("io.ktor:ktor-client-content-negotiation:2.3.12")
     implementation ("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
     implementation ("io.ktor:ktor-client-auth:2.3.12")
+    implementation ("io.ktor:ktor-client-logging:2.3.12")
 
     // Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
     // Coroutines
     implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
@@ -101,4 +105,7 @@ dependencies {
 
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:20.7.0")
+
+    // Material3
+    implementation("androidx.compose.material3:material3:1.4.0-alpha15")
 }

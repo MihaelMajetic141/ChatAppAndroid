@@ -100,12 +100,12 @@ fun AuthTextField(
         keyboardOptions = keyboardOptions,
         leadingIcon = leadingIcon,
         trailingIcon = trailingIcon,
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedBorderColor = Color.White,
-            focusedBorderColor = Color.White,
-            unfocusedTextColor = Color.White,
-            focusedTextColor = Color.White,
-        ),
+//        colors = OutlinedTextFieldDefaults.colors(
+//            unfocusedBorderColor = Color.White,
+//            focusedBorderColor = Color.White,
+//            unfocusedTextColor = Color.White,
+//            focusedTextColor = Color.White,
+//        ),
     )
     if(isError && errorLabel.isNotEmpty()){
         Spacer(modifier = Modifier.height(4.dp))

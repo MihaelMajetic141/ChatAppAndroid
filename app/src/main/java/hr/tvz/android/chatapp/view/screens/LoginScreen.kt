@@ -1,11 +1,6 @@
 package hr.tvz.android.chatapp.view.screens
 
-import android.content.Context
-import android.content.Intent
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,46 +9,34 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CutCornerShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import hr.tvz.android.chatapp.model.payload.request.LoginRequest
-import hr.tvz.android.chatapp.model.routes.Routes
+import hr.tvz.android.chatapp.data.payload.request.LoginRequest
+import hr.tvz.android.chatapp.data.routes.Routes
 import hr.tvz.android.chatapp.viewmodel.AuthViewModel
-import hr.tvz.android.chatapp.R
 import hr.tvz.android.chatapp.view.components.AuthTextField
 import hr.tvz.android.chatapp.viewmodel.AuthState
 
@@ -64,7 +47,7 @@ fun LoginScreen(
     authViewModel: AuthViewModel
 ) {
     val context = LocalContext.current
-    val email by authViewModel.email.collectAsState()
+    val username by authViewModel.username.collectAsState()
     val password by authViewModel.password.collectAsState()
     val authViewState by authViewModel.authState.collectAsState()
 
@@ -86,25 +69,29 @@ fun LoginScreen(
         ) {
             LoginHeader(headerString = "Sign in")
             LoginFields(
-                email = email.text,
+                username = username.text,
                 password = password.text,
-                onEmailChange = { value -> authViewModel.setEmail(value) },
+                onUsernameChange = { value -> authViewModel.setUsername(value) },
                 onPasswordChange = { value -> authViewModel.setPassword(value) },
                 onForgotPasswordClick = {},
-                isErrorEmail = email.errorMsg != null,
+                isErrorUsername = username.errorMsg != null,
                 isErrorPassword = password.errorMsg != null,
-                errorLabelEmail = "Email cannot be empty",
+                errorLabelUsername = "Username cannot be empty",
                 errorLabelPassword = "Password cannot be empty"
             )
             LoginFooter(
                 onSignInClick = {
                     if(authViewModel.validateUsername() && authViewModel.validatePassword()) {
-                        authViewModel.login(LoginRequest(email.text, password.text), context)
+                        authViewModel.login(
+                            LoginRequest(
+                                username.text,
+                                password.text
+                            ), context)
                     }
                 },
                 onSignUpClick = { navController.navigate(Routes.Register.route) }
             )
-            // GoogleSignInButton(authViewModel = authViewModel)
+            // ToDo: GoogleSignInButton(authViewModel = authViewModel)
 
             when (authViewState) {
                 is AuthState.Loading -> {
@@ -118,13 +105,14 @@ fun LoginScreen(
                 }
 
                 is AuthState.LoggedIn -> {
-                    navController.navigate("movies/profile")
+                    navController.navigate(Routes.Home.route)
                 }
 
                 is AuthState.LoggedOut -> { }
                 is AuthState.Error -> {
                     val error = (authViewState as AuthState.Error).errorResponse
-                    Toast.makeText(context,error, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                    Text(error)
                 }
 
                 AuthState.RegistrationSuccess -> {}
@@ -152,33 +140,33 @@ fun LoginHeader(headerString: String) {
 
 @Composable
 fun LoginFields(
-    email: String,
+    username: String,
     password: String,
-    onEmailChange: (String) -> Unit,
+    onUsernameChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onForgotPasswordClick: () -> Unit,
-    isErrorEmail: Boolean,
+    isErrorUsername: Boolean,
     isErrorPassword: Boolean,
     errorLabelPassword: String,
-    errorLabelEmail: String
+    errorLabelUsername: String
 ) {
     Column {
         AuthTextField(
-            value = email,
+            value = username,
             label = "Username",
             placeholder = "Enter your username",
-            onValueChange = onEmailChange,
+            onValueChange = onUsernameChange,
             leadingIcon = {
                 Icon(
                     Icons.Default.AccountBox ,
-                    contentDescription = "Email"
+                    contentDescription = "Username"
                 )
             },
             keyboardOptions = KeyboardOptions(
                 imeAction = ImeAction.Next
             ),
-            isError = isErrorEmail,
-            errorLabel = errorLabelEmail
+            isError = isErrorUsername,
+            errorLabel = errorLabelUsername
         )
         Spacer(modifier = Modifier.height(10.dp))
         AuthTextField(
@@ -217,7 +205,7 @@ fun LoginFooter(
     onSignUpClick: () -> Unit,
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Button(
+        TextButton(
             onClick = onSignInClick,
             modifier = Modifier.fillMaxWidth()
         ) {

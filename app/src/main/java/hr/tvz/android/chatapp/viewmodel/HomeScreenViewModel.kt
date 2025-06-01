@@ -3,8 +3,8 @@ package hr.tvz.android.chatapp.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import hr.tvz.android.chatapp.model.dto.ConversationDTO
-import hr.tvz.android.chatapp.network.repository.ConversationRepository
+import hr.tvz.android.chatapp.data.dto.ConversationDTO
+import hr.tvz.android.chatapp.network.repositories.ConversationRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -35,32 +35,6 @@ class ChatListViewModel @Inject constructor(
             }
         }
     }
-
-//    suspend fun createNewConversation(
-//        conversation: Conversation,
-//        // accessToken: String,
-//    ) = viewModelScope.launch {
-//        try {
-//            val newConversation = conversationRepository.createNewConversation(conversation)
-//            if (newConversation != null) {
-//                _viewState.update {
-//                    val current = (it as? ChatListViewState.Success)
-//                        ?.conversationDtoList ?: emptyList()
-//                    val newList = conversationRepository.fetchAllConversationsByUserId(userId);
-//                    ChatListViewState.Success(conversationDtoList = current + newConversation)
-//                }
-//            } else {
-//                _viewState.update {
-//                    ChatListViewState.Error("Failed to create new conversation.")
-//                }
-//            }
-//        } catch (e: Exception) {
-//            _viewState.update {
-//                ChatListViewState.Error("Failed to create new conversation: ${e.message}")
-//            }
-//        }
-//    }
-
 
 }
 

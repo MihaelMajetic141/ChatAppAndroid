@@ -1,8 +1,8 @@
-package hr.tvz.android.chatapp.model
+package hr.tvz.android.chatapp.data.model
 
-import kotlinx.serialization.Contextual
+import hr.tvz.android.chatapp.data.payload.InstantSerializer
 import kotlinx.serialization.Serializable
-import java.util.Date
+import java.time.Instant
 
 @Serializable
 data class Conversation (
@@ -14,6 +14,5 @@ data class Conversation (
     val inviteLink: String?,
     val adminIds: List<String>?,
     val memberIds: List<String>?,
-    @Contextual //toDo: Double check this
-    val createdAt: Date? = null,
+    @Serializable(with = InstantSerializer::class) val createdAt: Instant?
 )

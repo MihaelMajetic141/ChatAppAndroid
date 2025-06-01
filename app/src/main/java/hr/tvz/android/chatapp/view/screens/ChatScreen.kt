@@ -1,6 +1,5 @@
 package hr.tvz.android.chatapp.view.screens
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,16 +36,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.datastore.dataStore
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import hr.tvz.android.chatapp.model.ChatMessage
-import hr.tvz.android.chatapp.model.Conversation
-import hr.tvz.android.chatapp.network.DataStoreManager
+import hr.tvz.android.chatapp.data.model.ChatMessage
+import hr.tvz.android.chatapp.data.model.Conversation
+import hr.tvz.android.chatapp.data.DataStoreManager
 import hr.tvz.android.chatapp.viewmodel.ChatViewModel
 import hr.tvz.android.chatapp.viewmodel.ConnectionState
 import java.time.Instant
-import java.util.Date
 
 
 @Composable
@@ -107,7 +104,6 @@ fun ChatScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ConversationHeader(
     conversation: Conversation?,
@@ -223,8 +219,7 @@ fun MessageInput(onSend: (ChatMessage) -> Unit) {
                     senderId = "senderId",
                     conversationId = "receiverId",
                     content = text,
-                    timestamp = Date.from(Instant.now()),
-//                    mediaFileType = "",
+                    timestamp = Instant.now()
 //                    mediaFileId = "",
 //                    replyTo = "",
 //                    reactions =

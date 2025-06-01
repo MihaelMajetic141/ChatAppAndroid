@@ -2,6 +2,7 @@ package hr.tvz.android.chatapp.view.screens
 
 import android.R.attr.data
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -28,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,12 +47,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.rememberAsyncImagePainter
+import hr.tvz.android.chatapp.BuildConfig
 import hr.tvz.android.chatapp.TopAppBarState
 import hr.tvz.android.chatapp.view.components.ContactListItem
 import hr.tvz.android.chatapp.view.components.TopBarWithBackArrow
-import hr.tvz.android.chatapp.model.dto.ContactDTO
-import hr.tvz.android.chatapp.model.routes.Routes
-import hr.tvz.android.chatapp.network.DataStoreManager
+import hr.tvz.android.chatapp.data.dto.ContactDTO
+import hr.tvz.android.chatapp.data.routes.Routes
+import hr.tvz.android.chatapp.data.DataStoreManager
 import hr.tvz.android.chatapp.viewmodel.CreateGroupViewState
 import hr.tvz.android.chatapp.viewmodel.LoadContactsViewState
 import hr.tvz.android.chatapp.viewmodel.NewConversationViewModel
@@ -63,6 +66,7 @@ fun CreateGroupScreen(
 ) {
     val context = LocalContext.current
     val dataStore = DataStoreManager(context)
+    val currentUserId by dataStore.userId.collectAsState("")
     val username by dataStore.userName.collectAsState(initial = "")
     val email by dataStore.userEmail.collectAsState(initial = "")
     val accessToken by dataStore.accessToken.collectAsState(initial = "")
@@ -70,8 +74,11 @@ fun CreateGroupScreen(
     val createGroupViewState by newConversationViewModel.createGroupViewState.collectAsState()
     val groupName by newConversationViewModel.groupName.collectAsState()
     val groupImageUri by newConversationViewModel.groupImageUri.collectAsState()
-    val groupMembers by newConversationViewModel.groupMembers.collectAsState()
+    val groupMembers by newConversationViewModel.selectedContacts.collectAsState()
 
+    LaunchedEffect(key1 = currentUserId != "") {
+        newConversationViewModel.getContacts(currentUserId ?: "")
+    }
 
     TopBarWithBackArrow(
         topAppBarState = topAppBarState,
@@ -105,7 +112,9 @@ fun CreateGroupScreen(
             CircularProgressIndicator()
         }
         is LoadContactsViewState.Success -> {
+            // ToDo: Check if this should be in ViewModel.
             val selectedContacts = remember { mutableStateListOf<ContactDTO>() }
+
             Column {
                 // ToDo: If not working replace with AnimatedVisibility(selectedContacts.isNotEmpty())
                 if (selectedContacts.isNotEmpty()) {
@@ -114,29 +123,29 @@ fun CreateGroupScreen(
                         items(selectedContacts) { contact ->
                             Column {
                                 SubcomposeAsyncImage(
-                                    model = contact.imageFileId, //ToDo
+                                    model = "${BuildConfig.SERVER_IP}/api/media/${contact.imageFileId}",
                                     contentDescription = "Contact image",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
                                         .size(40.dp)
                                         .clip(CircleShape)
-                                        .clickable(onClick = {}) //ToDo: Remove from selected
+                                        .clickable(onClick = { }) // ToDo: Remove from selected
                                         .padding(8.dp)
                                         .background(MaterialTheme.colorScheme.primary, CircleShape)
                                 )
                                 Text(contact.username)
                             }
-
                         }
                     }
                 }
 
+                //ToDo: Check if empty
                 LazyColumn {
                     items(viewState.contactList) { contact ->
                         val isSelected = selectedContacts.contains(contact)
                         ContactListItem(
                             contactDTO = contact,
-                            subHeader = contact.status,
+                            subHeader = contact.status ?: "",
                             isSelected = isSelected,
                             onClick = {
                                 if (isSelected) {
@@ -145,7 +154,8 @@ fun CreateGroupScreen(
                                     selectedContacts.add(contact)
                                 }
                             },
-                            onLongClick = { /* Do nothing for now */ }
+                            onLongClick = {},
+                            modifier = Modifier
                         )
                     }
                 }
@@ -153,10 +163,12 @@ fun CreateGroupScreen(
                 IconButton(
                     modifier = Modifier.size(50.dp),
                     onClick = {
-                        newConversationViewModel.newGroup(
-                            groupName,
-                            groupImageUri,
-                            groupMembers.map { it.userInfoId }
+                        val adminIdList = mutableListOf(currentUserId ?: "") // ToDo: Add others later
+                        newConversationViewModel.createGroup(
+                            groupName = groupName,
+                            groupImage = groupImageUri,
+                            groupMemberIds = groupMembers.map { it.userInfoId },
+                            adminIds = adminIdList.toList()
                         )
                     }
                 ) {
@@ -166,16 +178,27 @@ fun CreateGroupScreen(
                     )
                 }
 
-                when(val viewState = createGroupViewState) {
+                when(createGroupViewState) {
                     is CreateGroupViewState.Error -> {
-                        Text("Error: ${viewState.message}")
+                        Text("Error: " +
+                                (createGroupViewState as CreateGroupViewState.Error).message)
                     }
                     is CreateGroupViewState.Loading -> {
                         Text("Loading...")
                     }
                     is CreateGroupViewState.Success -> {
-                        //ToDo: Toast. Maybe even navigate to group conversation screen.
-                        navController.navigate(Routes.Home.route)
+                        Toast.makeText(
+                            LocalContext.current,
+                            "New group created!",
+                            Toast.LENGTH_SHORT).show()
+                        navController.navigate(
+                            route = Routes.Chat.route +
+                                "/${(createGroupViewState as CreateGroupViewState.Success).groupId}"
+                        ) {
+                            popUpTo(Routes.Home.route) {
+                                inclusive = true
+                            }
+                        }
                     }
                 }
 

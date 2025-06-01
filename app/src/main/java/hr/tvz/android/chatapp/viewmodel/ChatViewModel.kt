@@ -3,11 +3,9 @@ package hr.tvz.android.chatapp.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import hr.tvz.android.chatapp.model.ChatMessage
-import hr.tvz.android.chatapp.model.Conversation
 import hr.tvz.android.chatapp.network.WebSocketClient
-import hr.tvz.android.chatapp.network.repository.ConversationRepository
-import hr.tvz.android.chatapp.network.repository.MessageRepository
+import hr.tvz.android.chatapp.network.repositories.ConversationRepository
+import hr.tvz.android.chatapp.network.repositories.MessageRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -20,11 +18,11 @@ class ChatViewModel @Inject constructor(
     private val conversationRepository: ConversationRepository
 ) : ViewModel() {
 
-    private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
-    val messages: StateFlow<List<ChatMessage>> = _messages
+    private val _messages = MutableStateFlow<List<hr.tvz.android.chatapp.data.model.ChatMessage>>(emptyList())
+    val messages: StateFlow<List<hr.tvz.android.chatapp.data.model.ChatMessage>> = _messages
 
-    private val _conversation = MutableStateFlow<Conversation?>(null)
-    val conversation: StateFlow<Conversation?> = _conversation
+    private val _conversation = MutableStateFlow<hr.tvz.android.chatapp.data.model.Conversation?>(null)
+    val conversation: StateFlow<hr.tvz.android.chatapp.data.model.Conversation?> = _conversation
 
     private val _isDirectMessage = MutableStateFlow(false)
     val isDirectMessage: StateFlow<Boolean> = _isDirectMessage
@@ -43,7 +41,7 @@ class ChatViewModel @Inject constructor(
         webSocketClient.start()
     }
 
-    fun sendMessage(message: ChatMessage) {
+    fun sendMessage(message: hr.tvz.android.chatapp.data.model.ChatMessage) {
         viewModelScope.launch {
             _messages.value += message
             webSocketClient.send(message)

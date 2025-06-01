@@ -1,6 +1,6 @@
 package hr.tvz.android.chatapp.network
 
-import hr.tvz.android.chatapp.model.ChatMessage
+import hr.tvz.android.chatapp.data.model.ChatMessage
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
@@ -12,7 +12,8 @@ import javax.inject.Inject
 import hr.tvz.android.chatapp.viewmodel.ConnectionState
 
 class WebSocketClient @Inject constructor(
-    private val httpClient: HttpClient
+    @AuthHttpClient private val authHttpClient: HttpClient,
+    @NoAuthHttpClient private val noAuthHttpClient: HttpClient,
 ) {
     private val WEBSOCKET_URL = "ws://10.0.2.2:8080/chat"
 
@@ -22,8 +23,8 @@ class WebSocketClient @Inject constructor(
     val connectionState: StateFlow<ConnectionState> = _connectionState
 
     // Incoming messages flow
-    private val _messages = MutableSharedFlow<ChatMessage>()
-    val messages: SharedFlow<ChatMessage> = _messages
+    private val _messages = MutableSharedFlow<hr.tvz.android.chatapp.data.model.ChatMessage>()
+    val messages: SharedFlow<hr.tvz.android.chatapp.data.model.ChatMessage> = _messages
 
     private var webSocketSession: WebSocketSession? = null
 
@@ -31,7 +32,7 @@ class WebSocketClient @Inject constructor(
         scope.launch {
             _connectionState.update { ConnectionState.CONNECTING }
             try {
-                httpClient.webSocket(WEBSOCKET_URL) {
+                authHttpClient.webSocket(WEBSOCKET_URL) {
                     webSocketSession = this
                     _connectionState.update { ConnectionState.CONNECTED }
                     try {
@@ -41,7 +42,7 @@ class WebSocketClient @Inject constructor(
                                 is Frame.Text -> {
                                     val text = frame.readText()
                                     try {
-                                        val chatMessage = Json.decodeFromString<ChatMessage>(text)
+                                        val chatMessage = Json.decodeFromString<hr.tvz.android.chatapp.data.model.ChatMessage>(text)
                                         _messages.emit(chatMessage)
                                     } catch (e: SerializationException) {
                                         // Log or handle deserialization error
@@ -85,7 +86,7 @@ class WebSocketClient @Inject constructor(
         }
     }
 
-    suspend fun send(message: ChatMessage) {
+    suspend fun send(message: hr.tvz.android.chatapp.data.model.ChatMessage) {
         val json = Json.encodeToString(message)
         webSocketSession?.send(Frame.Text(json))
             ?: // Optionally log or throw an exception if session is null

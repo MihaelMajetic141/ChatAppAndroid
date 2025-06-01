@@ -1,9 +1,12 @@
-package hr.tvz.android.chatapp.network.repository
+package hr.tvz.android.chatapp.network.repositories
 
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import dagger.hilt.android.qualifiers.ApplicationContext
+import hr.tvz.android.chatapp.BuildConfig
+import hr.tvz.android.chatapp.network.AuthHttpClient
+import hr.tvz.android.chatapp.network.NoAuthHttpClient
 import io.ktor.client.HttpClient
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
@@ -16,10 +19,11 @@ import java.io.IOException
 import javax.inject.Inject
 
 class MediaRepository @Inject constructor(
-    private val httpClient: HttpClient,
+    @AuthHttpClient private val authHttpClient: HttpClient,
+    @NoAuthHttpClient private val noAuthHttpClient: HttpClient,
     @ApplicationContext private val applicationContext: Context
 ) {
-    private val baseUrl = "http://10.0.2.2:8080/api/media"
+    private val baseUrl = "${BuildConfig.SERVER_IP}/api/media"
 
     suspend fun uploadMedia(mediaUri: Uri): String {
         val contentResolver = applicationContext.contentResolver
@@ -29,7 +33,7 @@ class MediaRepository @Inject constructor(
         val inputStream = contentResolver.openInputStream(mediaUri)
             ?: throw IOException("Failed to open input stream")
 
-        val response: HttpResponse = httpClient.submitFormWithBinaryData(
+        val response: HttpResponse = authHttpClient.submitFormWithBinaryData(
             url = "$baseUrl/upload_image",
             formData = formData {
                 append(

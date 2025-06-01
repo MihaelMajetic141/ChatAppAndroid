@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -19,7 +20,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
-import hr.tvz.android.chatapp.model.dto.ContactDTO
+import hr.tvz.android.chatapp.BuildConfig
+import hr.tvz.android.chatapp.data.dto.ContactDTO
 
 
 @Composable
@@ -29,17 +31,15 @@ fun ContactListItem(
     isSelected: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    modifier: Modifier
 ) {
-    val header = contactDTO.username
-
-    Row {
+    Row() {
         Box(modifier = Modifier
-            .weight(1f)
             .background(if (isSelected) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.surface)
         ) {
             SubcomposeAsyncImage(
-                model = contactDTO.imageFileId, //ToDo: Check this
+                model = "${BuildConfig.SERVER_IP}/api/media/${contactDTO.imageFileId}",
                 contentDescription = "Conversation image",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
@@ -62,12 +62,11 @@ fun ContactListItem(
         }
         Column {
             Text(
-                text = header,
+                text = contactDTO.username,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier
                     .padding(start = 8.dp)
                     .weight(1f)
-                    .clickable(onClick = onClick)
             )
             Text(
                 text = subHeader,
@@ -75,7 +74,6 @@ fun ContactListItem(
                 modifier = Modifier
                     .padding(start = 8.dp)
                     .weight(1f)
-                    .clickable(onClick = onClick)
             )
         }
     }

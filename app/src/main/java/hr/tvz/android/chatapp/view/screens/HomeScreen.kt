@@ -16,6 +16,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -27,14 +28,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import coil.compose.SubcomposeAsyncImage
+import hr.tvz.android.chatapp.BuildConfig
 import hr.tvz.android.chatapp.TopAppBarState
-import hr.tvz.android.chatapp.model.dto.ConversationDTO
-import hr.tvz.android.chatapp.model.routes.Routes
-import hr.tvz.android.chatapp.network.DataStoreManager
-import hr.tvz.android.chatapp.viewmodel.AuthState
+import hr.tvz.android.chatapp.data.dto.ConversationDTO
+import hr.tvz.android.chatapp.data.routes.Routes
+import hr.tvz.android.chatapp.data.DataStoreManager
+import hr.tvz.android.chatapp.view.components.TopBarWithBackArrow
 import hr.tvz.android.chatapp.viewmodel.AuthViewModel
 import hr.tvz.android.chatapp.viewmodel.ChatListViewModel
 import hr.tvz.android.chatapp.viewmodel.ChatListViewState
+import hr.tvz.android.chatapp.viewmodel.LoadContactsViewState
+import hr.tvz.android.chatapp.viewmodel.NewConversationViewModel
 
 @Composable
 fun ChatListScreen(
@@ -44,30 +49,59 @@ fun ChatListScreen(
     chatListViewModel: ChatListViewModel = hiltViewModel(),
 ) {
     val isUserLoggedIn by authViewModel.isUserLoggedIn.collectAsState()
-
     if (!isUserLoggedIn) {
-        LoggedOutScreen(navController)
+        LoggedOutScreen(navController, topAppBarState)
     } else {
-        LoggedInScreen(
-            chatListViewModel,
-            navController
-        )
+        LoggedInScreen(chatListViewModel, navController)
     }
 }
 
 @Composable
 fun LoggedOutScreen(
-    navController: NavController
+    navController: NavController,
+    topAppBarState: MutableState<TopAppBarState>,
+    newConversationViewModel: NewConversationViewModel = hiltViewModel()
 ) {
+    TopBarWithBackArrow(
+        title = "ChatApp",
+        topAppBarState = topAppBarState,
+        navController = navController
+    )
     Box(
-        modifier = Modifier.size(58.dp),
         contentAlignment = Alignment.Center
     ) {
-        Button(
-            modifier = Modifier,
-            onClick = { navController.navigate(Routes.Login.route) }
-        ) {
-            Text("Login")
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Button(
+                modifier = Modifier,
+                onClick = { navController.navigate(Routes.Login.route) }
+            ) {
+                Text("Login")
+            }
+
+            Button(
+                modifier = Modifier,
+                onClick = { newConversationViewModel.getAllUsers() }
+            ) {
+                Text("Get all users")
+            }
+
+            val newConversationViewState by newConversationViewModel.loadContactsViewState.collectAsState()
+            when(val viewState = newConversationViewState) {
+                is LoadContactsViewState.Loading -> {
+                    Text("Loading")
+                }
+
+                is LoadContactsViewState.Error -> {
+                    Text("Error")
+                }
+                is LoadContactsViewState.Success -> {
+                    LazyColumn {
+                        items(viewState.contactList) {
+                            Text(text = it.username)
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -79,13 +113,14 @@ fun LoggedInScreen(
 ) {
     val context = LocalContext.current
     val dataStore = DataStoreManager(context)
+    val userId by dataStore.userId.collectAsState(initial = "")
     val username by dataStore.userName.collectAsState(initial = "")
     val email by dataStore.userEmail.collectAsState(initial = "")
     val accessToken by dataStore.accessToken.collectAsState(initial = "")
     val chatListViewState by chatListViewModel.viewState.collectAsState()
 
-    LaunchedEffect(key1 = Unit) {
-        chatListViewModel.fetchConversationsByUserId("userId") // ToDo: Get userId from auth
+    LaunchedEffect(key1 = userId != "") {
+        chatListViewModel.fetchConversationsByUserId(userId ?: "")
     }
 
     when (val viewState = chatListViewState) {
@@ -93,14 +128,22 @@ fun LoggedInScreen(
             Text(text = "Loading...")
         }
         is ChatListViewState.Success -> {
-            ChatList(
-                viewState.conversationDTOList,
-                navController
-            )
-            NewConversationButton(
-                onClick = { navController.navigate(Routes.NewConversation.route) },
-                modifier = Modifier.padding(8.dp)
-            )
+            if (viewState.conversationDTOList.isNotEmpty()) {
+                ChatList(
+                    viewState.conversationDTOList,
+                    navController,
+                    modifier = Modifier
+                )
+                NewConversationButton(
+                    onClick = { navController.navigate(Routes.NewConversation.route) },
+                    modifier = Modifier.padding(8.dp)
+                )
+            } else {
+                EmptyChatList(
+                    navController,
+                    Modifier
+                )
+            }
         }
         is ChatListViewState.Empty -> {
             Text(text = viewState.message)
@@ -112,16 +155,28 @@ fun LoggedInScreen(
 }
 
 @Composable
+fun EmptyChatList(
+    navController: NavController,
+    modifier: Modifier
+) {
+    Box(contentAlignment = Alignment.Center) {
+        TextButton(
+            onClick = { navController.navigate(Routes.NewConversation.route) }
+        ) {
+            Text("No Conversations yet..")
+        }
+    }
+}
+
+@Composable
 fun ChatList(
     conversationDTOs: List<ConversationDTO>,
-    navController: NavController
+    navController: NavController,
+    modifier: Modifier
 ) {
-
-    // ToDo: Check if empty.
-
     LazyColumn {
         items(conversationDTOs) { chatGroup ->
-            ChatListItem(navController, chatGroup)
+            ChatListItem(navController, chatGroup, modifier)
         }
     }
 }
@@ -129,16 +184,21 @@ fun ChatList(
 @Composable
 fun ChatListItem(
     navController: NavController,
-    conversationDto: ConversationDTO
+    conversationDto: ConversationDTO,
+    modifier: Modifier
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
-            .clickable { navController.navigate("/chat/{$conversationDto.id}") }
+            .clickable { navController.navigate(Routes.Chat.route + "/${conversationDto.id}") }
     ) {
         Row {
             // ToDo: Image
+            SubcomposeAsyncImage(
+                model = "${BuildConfig.SERVER_IP}/api/media/${conversationDto.imageFileId}",
+                contentDescription = "Conversation image"
+            )
             Column() {
                 Text(
                     text = conversationDto.name,

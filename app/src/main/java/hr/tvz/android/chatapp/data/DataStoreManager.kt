@@ -1,4 +1,4 @@
-package hr.tvz.android.chatapp.network
+package hr.tvz.android.chatapp.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
@@ -25,7 +25,18 @@ class DataStoreManager @Inject constructor(
         // private val PICTURE_KEY = stringPreferencesKey("picture")
     }
 
-    suspend fun saveAuthData(
+    // ToDo: check if remaining preferences stay the same
+    suspend fun saveJwtResponseData(
+        accessToken: String,
+        refreshToken: String
+    ) {
+        context.dataStore.edit { preferences ->
+            preferences[ACCESS_TOKEN] = accessToken
+            preferences[REFRESH_TOKEN] = refreshToken
+        }
+    }
+
+    suspend fun saveAuthResponseData(
         accessToken: String,
         refreshToken: String,
         userId: String,
