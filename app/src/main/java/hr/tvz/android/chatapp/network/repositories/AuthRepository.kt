@@ -30,9 +30,6 @@ class AuthRepository @Inject constructor(
         val response = noAuthHttpClient.post(urlString = "$baseUrl/login") {
             setBody(loginRequest)
             contentType(ContentType.Application.Json)
-//            headers {
-//                append(HttpHeaders.Accept, "application/json")
-//            }
         }
         Log.d("Network", "Response status: ${response.status}")
         Log.d("Network", "Raw response: ${response.bodyAsText()}")

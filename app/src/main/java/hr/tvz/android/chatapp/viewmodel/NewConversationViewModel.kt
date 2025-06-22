@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import hr.tvz.android.chatapp.data.dto.ContactDTO
+import hr.tvz.android.chatapp.data.dto.ConversationDTO
+import hr.tvz.android.chatapp.data.model.Conversation
 import hr.tvz.android.chatapp.network.repositories.ContactRepository
 import hr.tvz.android.chatapp.network.repositories.ConversationRepository
 import hr.tvz.android.chatapp.network.repositories.MediaRepository
@@ -26,11 +28,17 @@ class NewConversationViewModel @Inject constructor(
     private val _loadContactsViewState = MutableStateFlow<LoadContactsViewState>(LoadContactsViewState.Loading)
     val loadContactsViewState = _loadContactsViewState.asStateFlow()
 
+    private val _loadConversationsViewState = MutableStateFlow<LoadConversationsViewState>(LoadConversationsViewState.Loading)
+    val loadConversationsViewState = _loadConversationsViewState.asStateFlow()
+
     private val _createContactViewState = MutableStateFlow<CreateContactViewState>(CreateContactViewState.Loading)
     val createContactViewState = _createContactViewState.asStateFlow()
 
     private val _createGroupViewState = MutableStateFlow<CreateGroupViewState>(CreateGroupViewState.Loading)
     val createGroupViewState = _createGroupViewState.asStateFlow()
+
+    private val _createDMViewState = MutableStateFlow<CreateDMViewState>(CreateDMViewState.Loading)
+    val createDMViewState = _createDMViewState.asStateFlow()
 
     private val _selectedContacts = MutableStateFlow<List<ContactDTO>>(emptyList())
     val selectedContacts = _selectedContacts.asStateFlow()
@@ -38,7 +46,7 @@ class NewConversationViewModel @Inject constructor(
     private val _groupName = MutableStateFlow("")
     val groupName = _groupName.asStateFlow()
 
-    private val _groupImageUri = MutableStateFlow<Uri>(Uri.EMPTY)
+    private val _groupImageUri = MutableStateFlow<Uri?>(Uri.EMPTY)
     val groupImageUri = _groupImageUri.asStateFlow()
 
     fun getContacts(currentUserId: String) {
@@ -57,7 +65,6 @@ class NewConversationViewModel @Inject constructor(
         }
     }
 
-    // ToDo: Delete later
     fun getAllUsers() {
         viewModelScope.launch {
             try {
@@ -74,10 +81,10 @@ class NewConversationViewModel @Inject constructor(
         }
     }
 
-    fun newContact(contactId: String, currentUserId: String) {
+    fun addNewContact(contactId: String, currentUserId: String) {
         viewModelScope.launch {
             try {
-                contactRepository.newContact(contactId, currentUserId)
+                contactRepository.addNewContact(contactId, currentUserId)
                 _createContactViewState.update {
                     CreateContactViewState.Success
                 }
@@ -89,11 +96,14 @@ class NewConversationViewModel @Inject constructor(
         }
     }
 
-    fun addContacts(contactIdList: List<String>, currentUserId: String) {
+    fun addNewContacts(contactIdList: List<String>, currentUserId: String) {
         viewModelScope.launch {
             try {
                 _createContactViewState.update { CreateContactViewState.Loading }
-                contactIdList.forEach { contactRepository.newContact(it, currentUserId) }
+                contactRepository.addNewContacts(
+                    contactIdList = contactIdList,
+                    currentUserId = currentUserId
+                )
                 _createContactViewState.update {
                     CreateContactViewState.Success
                 }
@@ -105,13 +115,17 @@ class NewConversationViewModel @Inject constructor(
         }
     }
 
-    fun createGroup(groupName: String, groupImage: Uri, groupMemberIds: List<String>,
-                    adminIds: List<String>) {
+    fun createGroup(
+        groupName: String,
+        groupImage: Uri?,
+        groupMemberIds: List<String>,
+        adminIds: List<String>
+    ) {
         viewModelScope.launch {
             try {
                 _createGroupViewState.update { CreateGroupViewState.Loading }
-                val imageFileId = mediaRepository.uploadMedia(groupImage)
-                val conversation = hr.tvz.android.chatapp.data.model.Conversation(
+                val imageFileId = mediaRepository.uploadMedia(groupImage ?: Uri.EMPTY)
+                val conversation = Conversation(
                     id = "",
                     name = groupName,
                     imageFileId = imageFileId,
@@ -134,33 +148,45 @@ class NewConversationViewModel @Inject constructor(
         }
     }
 
-    fun createDM(currentUser: String, user2: String) {
+    fun createDM(currentUserId: String, user2: String) {
         viewModelScope.launch {
             try {
-                val newConversation = conversationRepository.createNewDM(currentUser, user2)
+                val newConversation = conversationRepository.createNewDM(currentUserId, user2)
+                _createDMViewState.update {
+                    CreateDMViewState.Success(conversationId = newConversation.id ?: "")
+                }
             } catch (e: Exception) {
-                _loadContactsViewState.update {
-                    LoadContactsViewState.Error(e.message?: "Error")
+                _createDMViewState.update {
+                    CreateDMViewState.Error(e.message?: "Error")
                 }
             }
         }
     }
 
-    fun addContactToList(userId: String) {
-        viewModelScope.launch {
-            val contact = contactRepository.getContactByUserId(userId)
-            contact?.let {
-                val updatedList = _selectedContacts.value.toMutableList()
-                if (!updatedList.any { it.userInfoId == contact.userInfoId }) {
-                    updatedList.add(contact)
-                    _selectedContacts.value = updatedList
-                }
-            }
-        }
+    fun addContactToList(contact: ContactDTO) {
+        _selectedContacts.value = _selectedContacts.value + contact
+
+//        viewModelScope.launch {
+//            val contact = contactRepository.getContactByUserId(userId)
+//            contact?.let {
+//                val updatedList = _selectedContacts.value.toMutableList()
+//                if (!updatedList.any { it.userInfoId == contact.userInfoId }) {
+//                    updatedList.add(contact)
+//                    _selectedContacts.value = updatedList
+//                }
+//            }
+//        }
     }
-    fun removeContactFromList(contactId: String) {
-        val updatedList = _selectedContacts.value.filterNot { it.userInfoId == contactId }
-        _selectedContacts.value = updatedList
+    fun removeContactFromList(contact: ContactDTO) {
+        _selectedContacts.value = _selectedContacts.value.filterNot { it == contact }
+    }
+
+    fun toggleSelectedContact(contact: ContactDTO) {
+        if (_selectedContacts.value.contains(contact)) {
+            removeContactFromList(contact)
+        } else {
+            addContactToList(contact)
+        }
     }
 
     fun setGroupName(name: String) {
@@ -187,6 +213,12 @@ sealed interface LoadContactsViewState {
     data class Error(val message: String) : LoadContactsViewState
 }
 
+sealed interface LoadConversationsViewState {
+    data object Loading: LoadConversationsViewState
+    data class Success(val conversationList: List<ConversationDTO>): LoadConversationsViewState
+    data class Error(val message: String): LoadConversationsViewState
+}
+
 sealed interface CreateContactViewState {
     data object Loading : CreateContactViewState
     data object Success : CreateContactViewState
@@ -197,4 +229,10 @@ sealed interface CreateGroupViewState {
     data object Loading : CreateGroupViewState
     data class Success(val groupId: String) : CreateGroupViewState
     data class Error(val message: String) : CreateGroupViewState
+}
+
+sealed interface CreateDMViewState {
+    data object Loading : CreateDMViewState
+    data class Success(val conversationId: String) : CreateDMViewState
+    data class Error(val message: String) : CreateDMViewState
 }

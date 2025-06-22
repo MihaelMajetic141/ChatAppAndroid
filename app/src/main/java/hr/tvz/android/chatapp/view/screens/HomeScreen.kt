@@ -4,15 +4,20 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.rounded.AddCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -22,6 +27,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -35,6 +42,7 @@ import hr.tvz.android.chatapp.data.dto.ConversationDTO
 import hr.tvz.android.chatapp.data.routes.Routes
 import hr.tvz.android.chatapp.data.DataStoreManager
 import hr.tvz.android.chatapp.view.components.TopBarWithBackArrow
+import hr.tvz.android.chatapp.view.components.TopBarWithConversationsSearch
 import hr.tvz.android.chatapp.viewmodel.AuthViewModel
 import hr.tvz.android.chatapp.viewmodel.ChatListViewModel
 import hr.tvz.android.chatapp.viewmodel.ChatListViewState
@@ -62,45 +70,20 @@ fun LoggedOutScreen(
     topAppBarState: MutableState<TopAppBarState>,
     newConversationViewModel: NewConversationViewModel = hiltViewModel()
 ) {
-    TopBarWithBackArrow(
-        title = "ChatApp",
-        topAppBarState = topAppBarState,
-        navController = navController
-    )
     Box(
-        contentAlignment = Alignment.Center
+        modifier = Modifier.fillMaxSize()
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            TopBarWithBackArrow(
+                title = "ChatApp",
+                topAppBarState = topAppBarState,
+                navController = navController
+            )
             Button(
                 modifier = Modifier,
                 onClick = { navController.navigate(Routes.Login.route) }
             ) {
                 Text("Login")
-            }
-
-            Button(
-                modifier = Modifier,
-                onClick = { newConversationViewModel.getAllUsers() }
-            ) {
-                Text("Get all users")
-            }
-
-            val newConversationViewState by newConversationViewModel.loadContactsViewState.collectAsState()
-            when(val viewState = newConversationViewState) {
-                is LoadContactsViewState.Loading -> {
-                    Text("Loading")
-                }
-
-                is LoadContactsViewState.Error -> {
-                    Text("Error")
-                }
-                is LoadContactsViewState.Success -> {
-                    LazyColumn {
-                        items(viewState.contactList) {
-                            Text(text = it.username)
-                        }
-                    }
-                }
             }
         }
     }
@@ -118,6 +101,8 @@ fun LoggedInScreen(
     val email by dataStore.userEmail.collectAsState(initial = "")
     val accessToken by dataStore.accessToken.collectAsState(initial = "")
     val chatListViewState by chatListViewModel.viewState.collectAsState()
+    val showSearchBar = remember { mutableStateOf(false) }
+    val searchQuery = remember { mutableStateOf("") }
 
     LaunchedEffect(key1 = userId != "") {
         chatListViewModel.fetchConversationsByUserId(userId ?: "")
@@ -128,21 +113,41 @@ fun LoggedInScreen(
             Text(text = "Loading...")
         }
         is ChatListViewState.Success -> {
-            if (viewState.conversationDTOList.isNotEmpty()) {
-                ChatList(
-                    viewState.conversationDTOList,
-                    navController,
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Column {
+                    TopBarWithConversationsSearch(
+                        title = "ChatApp",
+                        showSearchBar = showSearchBar,
+                        searchQuery = searchQuery,
+                        conversationList = viewState.conversationDTOList,
+                        navController = navController
+                    )
+                    if (viewState.conversationDTOList.isNotEmpty()) {
+                        ChatList(
+                            conversationDTOs = viewState.conversationDTOList,
+                            navController = navController,
+                            modifier = Modifier
+                        )
+                    } else {
+                        EmptyChatList(
+                            navController = navController,
+                            modifier = Modifier
+                        )
+                    }
+                }
+                FloatingActionButton(
                     modifier = Modifier
-                )
-                NewConversationButton(
-                    onClick = { navController.navigate(Routes.NewConversation.route) },
-                    modifier = Modifier.padding(8.dp)
-                )
-            } else {
-                EmptyChatList(
-                    navController,
-                    Modifier
-                )
+                        .size(50.dp)
+                        .align(Alignment.BottomEnd)
+                        .offset((-25).dp, (-75).dp),
+                    onClick = {
+                        navController.navigate(Routes.NewConversation.route)
+                    },
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.PlaylistAdd, "New Chat")
+                }
             }
         }
         is ChatListViewState.Empty -> {
@@ -175,16 +180,20 @@ fun ChatList(
     modifier: Modifier
 ) {
     LazyColumn {
-        items(conversationDTOs) { chatGroup ->
-            ChatListItem(navController, chatGroup, modifier)
+        items(conversationDTOs) { conversation ->
+            ChatListItem(
+                conversationDto = conversation,
+                navController = navController,
+                modifier = modifier
+            )
         }
     }
 }
 
 @Composable
 fun ChatListItem(
-    navController: NavController,
     conversationDto: ConversationDTO,
+    navController: NavController,
     modifier: Modifier
 ) {
     Card(
@@ -194,7 +203,6 @@ fun ChatListItem(
             .clickable { navController.navigate(Routes.Chat.route + "/${conversationDto.id}") }
     ) {
         Row {
-            // ToDo: Image
             SubcomposeAsyncImage(
                 model = "${BuildConfig.SERVER_IP}/api/media/${conversationDto.imageFileId}",
                 contentDescription = "Conversation image"
@@ -210,21 +218,5 @@ fun ChatListItem(
                 )
             }
         }
-    }
-}
-
-@Composable
-fun NewConversationButton(
-    onClick: () -> Unit,
-    modifier: Modifier
-) {
-    IconButton(
-        modifier = modifier.size(80.dp),
-        onClick = { onClick() }
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.AddCircle,
-            contentDescription = "New conversation button"
-        )
     }
 }

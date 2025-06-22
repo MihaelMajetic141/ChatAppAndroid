@@ -8,21 +8,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBackIosNew
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -48,18 +43,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import coil.compose.SubcomposeAsyncImage
-import hr.tvz.android.chatapp.BuildConfig
 import hr.tvz.android.chatapp.TopAppBarState
 import hr.tvz.android.chatapp.data.DataStoreManager
 import hr.tvz.android.chatapp.data.dto.ContactDTO
-import hr.tvz.android.chatapp.view.components.TopBarWithBackArrow
+import hr.tvz.android.chatapp.view.components.TopBarWithContactsSearch
 import hr.tvz.android.chatapp.viewmodel.LoadContactsViewState
 import hr.tvz.android.chatapp.viewmodel.NewConversationViewModel
 
@@ -81,7 +73,8 @@ fun CreateContactScreen(
     val searchQuery = remember { mutableStateOf("") }
     val selectedContacts = remember { mutableStateListOf<ContactDTO>() }
 
-    //ToDo: Create contact form, for now just all user's list with checkboxes
+    //ToDo: Create contact form, for now just all users list with checkboxes
+
     LaunchedEffect(Unit) {
         newConversationViewModel.getAllUsers()
     }
@@ -108,82 +101,15 @@ fun CreateContactScreen(
                 }
             }
 
-            Box(modifier = Modifier
-                .fillMaxSize()
-            ) {
+            Box(modifier = Modifier.fillMaxSize()) {
                 Column() {
-                    AnimatedVisibility(visible = !showSearchBar.value) {
-                        TopAppBar(
-                            title = {
-                                Text("Create contact")
-                            },
-                            navigationIcon = {
-                                IconButton(
-                                    onClick = { navController.navigate(0) }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Back arrow"
-                                    )
-                                }
-                            },
-                            actions = {
-                                IconButton(
-                                    onClick = {
-                                        showSearchBar.value = true
-                                    }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Search,
-                                        contentDescription = "Toggle search bar",
-                                    )
-                                }
-                            }
-                        )
-                    }
-                    AnimatedVisibility(visible = showSearchBar.value) {
-                        SearchBar(
-                            modifier = Modifier.fillMaxWidth(),
-                            state = rememberSearchBarState(),
-                            inputField = {
-                                SearchBarDefaults.InputField(
-                                    query = searchQuery.value,
-                                    onQueryChange = { searchQuery.value = it },
-                                    onSearch = { },
-                                    expanded = true,
-                                    onExpandedChange = { },
-                                    leadingIcon = {
-                                        IconButton(
-                                            onClick = {
-                                                showSearchBar.value = false
-                                            },
-                                            content = {
-                                                Icon(
-                                                    imageVector = Icons.Default.ArrowBackIosNew,
-                                                    contentDescription = "Back arrow"
-                                                )
-                                            }
-                                        )
-                                    },
-                                    trailingIcon = {
-                                        IconButton(
-                                            onClick = {
-                                                viewState.contactList.filter {
-                                                    it.username.contains(searchQuery.value)
-                                                }
-                                            },
-                                            content = {
-                                                Icon(
-                                                    imageVector = Icons.Default.Search,
-                                                    contentDescription = "Search button"
-                                                )
-                                            }
-                                        )
-                                    }
-                                )
-                            }
-                        )
-                    }
+                    TopBarWithContactsSearch(
+                        title = "Create contact",
+                        showSearchBar = showSearchBar,
+                        searchQuery = searchQuery,
+                        contactList = viewState.contactList,
+                        navController = navController
+                    )
                     AnimatedVisibility(visible = selectedContacts.isNotEmpty()) {
                         Row {
                             selectedContacts.forEach() { contact ->
@@ -248,7 +174,7 @@ fun CreateContactScreen(
                         .align(Alignment.BottomEnd)
                         .offset((-75).dp, (-75).dp),
                     onClick = {
-                        newConversationViewModel.addContacts(
+                        newConversationViewModel.addNewContacts(
                             contactIdList = selectedContacts.map { it.userInfoId },
                             currentUserId = currentUserId ?: "")
                     },
@@ -266,11 +192,9 @@ fun CreateContactScreen(
 fun CreateContactScreenPreview() {
     val showSearchBar = remember { mutableStateOf(false) }
     val searchQuery = remember { mutableStateOf("") }
-    val searchResults = remember { mutableStateListOf<String>() }
     val selectedContacts = remember { mutableStateListOf<String>() }
     val allContacts = remember {
         mutableStateListOf<String>().apply {
-            // this block runs exactly once per Composition lifecycle
             for (i in 0..5) {
                 add("Contact $i")
             }
@@ -374,9 +298,7 @@ fun CreateContactScreenPreview() {
                     }
                 }
             }
-            LazyColumn(modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp)) {
+            LazyColumn(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
                 contacts.forEach() {
                     item {
                         Row(modifier = Modifier
@@ -417,7 +339,7 @@ fun CreateContactScreenPreview() {
             modifier = Modifier
                 .size(50.dp)
                 .align(Alignment.BottomEnd)
-                .offset((-75).dp, (-75).dp),
+                .offset((-25).dp, (-75).dp),
             onClick = { },
         ) {
             Icon(Icons.Filled.Add, "Localized description")

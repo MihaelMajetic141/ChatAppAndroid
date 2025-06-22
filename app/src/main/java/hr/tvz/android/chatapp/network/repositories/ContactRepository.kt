@@ -9,13 +9,12 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
-import io.ktor.client.utils.EmptyContent.headers
 import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import io.ktor.http.headers
 import javax.inject.Inject
 
 class ContactRepository @Inject constructor(
@@ -56,7 +55,7 @@ class ContactRepository @Inject constructor(
         }
         return when (response.status) {
             HttpStatusCode.OK -> response.body()
-            else -> throw Exception("Failed to fetch user info: ${response.status}")
+            else -> throw Exception("Failed to fetch contact by email: ${response.status}")
         }
     }
 
@@ -70,14 +69,26 @@ class ContactRepository @Inject constructor(
         }
     }
 
-    suspend fun newContact(contactId: String, currentUserId: String): ContactDTO {
-        val response = authHttpClient.get("$baseUrl/new/$contactId}") {
+    suspend fun addNewContact(contactId: String, currentUserId: String): ContactDTO {
+        val response = authHttpClient.post("$baseUrl/new/$contactId}") {
             contentType(ContentType.Application.Json)
             parameter("currentUserId", currentUserId)
         }
         return when (response.status) {
             HttpStatusCode.OK -> response.body()
-            else -> throw Exception("Failed to fetch user info: ${response.status}")
+            else -> throw Exception("Failed to create new contact: ${response.status}")
+        }
+    }
+
+    suspend fun addNewContacts(contactIdList: List<String>, currentUserId: String): ContactDTO {
+        val response = authHttpClient.post("$baseUrl/new") {
+            contentType(ContentType.Application.Json)
+            setBody(contactIdList)
+            parameter("currentUserId", currentUserId)
+        }
+        return when (response.status) {
+            HttpStatusCode.OK -> response.body()
+            else -> throw Exception("Failed to create new contact: ${response.status}")
         }
     }
 }

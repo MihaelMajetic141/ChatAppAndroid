@@ -98,7 +98,7 @@ fun RegistrationScreen(
                         )
                     }
                 },
-                onSignInClick = { navController.navigate(Routes.Login.route) } // ToDo: Clear input fields.
+                onSignInClick = { navController.navigate(Routes.Login.route) }
             )
 //            GoogleSignInButton(
 //                context = LocalContext.current,

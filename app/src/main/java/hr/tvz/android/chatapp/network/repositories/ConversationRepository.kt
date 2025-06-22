@@ -2,6 +2,7 @@ package hr.tvz.android.chatapp.network.repositories
 
 import hr.tvz.android.chatapp.BuildConfig
 import hr.tvz.android.chatapp.data.dto.ConversationDTO
+import hr.tvz.android.chatapp.data.model.Conversation
 import hr.tvz.android.chatapp.network.AuthHttpClient
 import hr.tvz.android.chatapp.network.NoAuthHttpClient
 import io.ktor.client.HttpClient
@@ -26,11 +27,10 @@ class ConversationRepository @Inject constructor(
     suspend fun getConversation(
         conversationId: String,
         currentUserId: String
-    ): hr.tvz.android.chatapp.data.model.Conversation {
+    ): Conversation {
         val response: HttpResponse = authHttpClient.get(
             urlString = "$baseUrl/get/$conversationId/$currentUserId"
         ) {
-            // parameter("conversationId", conversationId)
             contentType(ContentType.Application.Json)
         }
         return when (response.status) {
@@ -51,7 +51,7 @@ class ConversationRepository @Inject constructor(
 
 
 
-    suspend fun createNewGroupChat(conversation: hr.tvz.android.chatapp.data.model.Conversation) : hr.tvz.android.chatapp.data.model.Conversation {
+    suspend fun createNewGroupChat(conversation: Conversation) : Conversation {
         val response: HttpResponse = authHttpClient.post("$baseUrl/create_group") {
             contentType(ContentType.Application.Json)
             setBody(conversation)
@@ -62,10 +62,7 @@ class ConversationRepository @Inject constructor(
         }
     }
 
-    suspend fun createNewDM(
-        senderId: String,
-        receiverId: String
-    ): hr.tvz.android.chatapp.data.model.Conversation {
+    suspend fun createNewDM(senderId: String, receiverId: String): Conversation {
         val response: HttpResponse = authHttpClient.post("$baseUrl/create_dm") {
             contentType(ContentType.Application.Json)
             parameter("senderId", senderId)

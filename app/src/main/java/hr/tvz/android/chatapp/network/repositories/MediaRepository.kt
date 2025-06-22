@@ -15,6 +15,8 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import javax.inject.Inject
 
@@ -27,25 +29,31 @@ class MediaRepository @Inject constructor(
 
     suspend fun uploadMedia(mediaUri: Uri): String {
         val contentResolver = applicationContext.contentResolver
-        val fileName = getFileNameFromUri(mediaUri) ?: "image_${System.currentTimeMillis()}"
-        val contentType = contentResolver.getType(mediaUri) ?: "image/*"
+        val fileName = getFileNameFromUri(mediaUri) ?: "media_${System.currentTimeMillis()}"
+        val contentType = contentResolver.getType(mediaUri) ?: "media/*"
 
         val inputStream = contentResolver.openInputStream(mediaUri)
             ?: throw IOException("Failed to open input stream")
 
         val response: HttpResponse = authHttpClient.submitFormWithBinaryData(
-            url = "$baseUrl/upload_image",
+            url = "$baseUrl/upload",
             formData = formData {
                 append(
                     "file",
-                    inputStream.readBytes(),
+                    inputStream.readBytes(), //ToDo: Find another solution for large files.
                     Headers.build {
                         append(HttpHeaders.ContentType, contentType)
-                        append(HttpHeaders.ContentDisposition, "filename=$fileName")
+                        append(
+                            HttpHeaders.ContentDisposition,
+                            "form-data; name=\"file\"; filename=\"$fileName\""
+                        )
                     }
                 )
             }
         )
+        withContext(Dispatchers.IO) {
+            inputStream.close()
+        }
 
         if (response.status == HttpStatusCode.OK) {
             return response.bodyAsText()

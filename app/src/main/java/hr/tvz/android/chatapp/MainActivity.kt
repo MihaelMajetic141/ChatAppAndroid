@@ -70,13 +70,18 @@ class MainActivity : ComponentActivity() {
                         )
                     },
                     bottomBar = {
+                        // ToDo: Show bottom bar only if user is logged in.
                         BottomAppBar {
                             BottomNavItem.items.listIterator().forEach { item ->
                                 NavigationBarItem(
                                     selected = navController.currentBackStackEntryAsState()
                                         .value?.destination?.route == item.route,
                                     onClick = {
-                                        navController.navigate(item.route) { popUpTo(0) }
+                                        if (authViewModel.isUserLoggedIn.value) {
+                                            navController.navigate(item.route) { popUpTo(0) }
+                                        } else {
+                                            navController.navigate(Routes.Login.route) { popUpTo(0) }
+                                        }
                                     },
                                     icon = { Icon(item.icon, contentDescription = item.label) },
                                     label = { Text(item.label) }
