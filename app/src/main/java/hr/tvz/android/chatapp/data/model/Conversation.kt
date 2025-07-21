@@ -1,18 +1,22 @@
 package hr.tvz.android.chatapp.data.model
 
 import hr.tvz.android.chatapp.data.payload.InstantSerializer
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.intellij.lang.annotations.Identifier
 import java.time.Instant
+import javax.annotation.processing.Generated
 
 @Serializable
 data class Conversation (
-    val id: String?,
-    val name: String?,
-    val description: String?,
+    @Identifier
+    val id: String? = null,
+    val name: String,
+    val description: String? = null,
     val imageFileId: String?,
-    val isDirectMessage: Boolean,
-    val inviteLink: String?,
-    val adminIds: List<String>?,
-    val memberIds: List<String>?,
-    @Serializable(with = InstantSerializer::class) val createdAt: Instant?
+    @SerialName("directMessage") val isDirectMessage: Boolean,
+    val inviteLink: String? = null,
+    val adminIds: List<String> = emptyList(),
+    val memberIds: List<String> = emptyList(),
+    @Serializable(with = InstantSerializer::class) val createdAt: Instant
 )

@@ -7,6 +7,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.SearchBar
@@ -17,6 +18,7 @@ import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import hr.tvz.android.chatapp.TopAppBarState
 import hr.tvz.android.chatapp.data.dto.ContactDTO
@@ -104,6 +106,7 @@ fun TopBarWithConversationsSearch(
             }
         )
     }
+    HorizontalDivider()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -122,7 +125,7 @@ fun TopBarWithContactsSearch(
             },
             navigationIcon = {
                 IconButton(
-                    onClick = { navController.navigate(0) }
+                    onClick = { navController.popBackStack() }
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -189,13 +192,13 @@ fun TopBarWithContactsSearch(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopBarWithBackArrow(
-    topAppBarState: MutableState<TopAppBarState>,
     navController: NavController,
     title: String,
 ) {
-    topAppBarState.value = TopAppBarState(
+    TopAppBar(
         title = { Text(title) },
         navigationIcon = {
             IconButton(

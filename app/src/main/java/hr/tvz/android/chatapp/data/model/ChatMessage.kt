@@ -6,13 +6,15 @@ import java.time.Instant
 
 @Serializable
 data class ChatMessage(
-    val id: String?,
+    val id: String? = null,
     val senderId: String?,
+    val username: String?,
     val conversationId: String?,
     val content: String?,
     val mediaFileId: String? = null,
-    val mediaFileType: String? = null,
+    val mediaType: String? = null,
     val replyTo: String? = null,
     @Serializable(with = InstantSerializer::class) val timestamp: Instant?,
-    val reactions: Map<String, Int>? = null
+    val reactions: Map<String, Int>? = null,
+    val formattedDate: String? = null
 )

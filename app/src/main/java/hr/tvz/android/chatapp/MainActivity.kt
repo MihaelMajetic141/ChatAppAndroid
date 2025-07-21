@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AddCircle
@@ -19,7 +21,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -55,40 +61,38 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
 
                 Scaffold(
-                    topBar = {
-                        TopAppBar(
-                            title = { topAppBarState.value.title() },
-                            navigationIcon = { topAppBarState.value.navigationIcon() },
-                            actions = { topAppBarState.value.actions() },
-                        )
-                    },
                     content = {
                         MainNavigation(
-                            topAppBarState = topAppBarState,
                             authViewModel = authViewModel,
                             navController = navController
                         )
                     },
-                    bottomBar = {
-                        // ToDo: Show bottom bar only if user is logged in.
-                        BottomAppBar {
-                            BottomNavItem.items.listIterator().forEach { item ->
-                                NavigationBarItem(
-                                    selected = navController.currentBackStackEntryAsState()
-                                        .value?.destination?.route == item.route,
-                                    onClick = {
-                                        if (authViewModel.isUserLoggedIn.value) {
-                                            navController.navigate(item.route) { popUpTo(0) }
-                                        } else {
-                                            navController.navigate(Routes.Login.route) { popUpTo(0) }
-                                        }
-                                    },
-                                    icon = { Icon(item.icon, contentDescription = item.label) },
-                                    label = { Text(item.label) }
-                                )
-                            }
-                        }
-                    }
+//                    bottomBar = {
+//                        // ToDo: Show bottom bar only if user is logged in.
+//                        BottomAppBar {
+//                            BottomNavItem.items.listIterator().forEach { item ->
+//                                NavigationBarItem(
+//                                    selected = navController.currentBackStackEntryAsState()
+//                                        .value?.destination?.route == item.route,
+//                                    onClick = {
+//                                        if (authViewModel.isUserLoggedIn.value) {
+//                                            navController.navigate(item.route) { popUpTo(0) }
+//                                        } else {
+//                                            navController.navigate(Routes.Login.route) { popUpTo(0) }
+//                                        }
+//                                    },
+//                                    icon = {
+//                                        Image(
+//                                            painter = painterResource(item.icon),
+//                                            contentDescription = item.label,
+//                                            modifier = Modifier.size(33.dp)
+//                                        )
+//                                    },
+//                                    label = { Text(item.label) }
+//                                )
+//                            }
+//                        }
+//                    }
                 )
             }
         }
@@ -98,7 +102,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun MainNavigation(
     navController: NavHostController,
-    topAppBarState: MutableState<TopAppBarState>,
     authViewModel: AuthViewModel
 ) {
     NavHost(
@@ -108,7 +111,6 @@ private fun MainNavigation(
         composable(route = Routes.Home.route) {
             ChatListScreen(
                 navController = navController,
-                topAppBarState = topAppBarState,
                 authViewModel = authViewModel
             )
         }
@@ -116,21 +118,18 @@ private fun MainNavigation(
         composable(route = Routes.NewConversation.route) {
             NewConversationScreen(
                 navController = navController,
-                topAppBarState = topAppBarState
             )
         }
 
         composable(route = Routes.CreateGroup.route) {
             CreateGroupScreen(
                 navController = navController,
-                topAppBarState = topAppBarState
             )
         }
 
         composable(route = Routes.CreateContact.route) {
             CreateContactScreen(
                 navController = navController,
-                topAppBarState = topAppBarState
             )
         }
 
@@ -167,10 +166,22 @@ data class TopAppBarState(
     val actions: @Composable () -> Unit = {}
 )
 
-sealed class BottomNavItem(val route: String, val icon: ImageVector, val label: String) {
-    data object Home : BottomNavItem(Routes.Home.route, Icons.Default.Home, "Home")
-    data object New : BottomNavItem(Routes.NewConversation.route, Icons.Default.AddCircle, "New Chat")
-    data object SignIn : BottomNavItem(Routes.Login.route, Icons.Default.AccountCircle, "Profile")
+sealed class BottomNavItem(val route: String, val icon: Int, val label: String) {
+    data object Home : BottomNavItem(
+        Routes.Home.route,
+        R.drawable.home,
+        "Home"
+    )
+    data object New : BottomNavItem(
+        Routes.NewConversation.route,
+        R.drawable.add_new,
+        "New Chat"
+    )
+    data object SignIn : BottomNavItem(
+        Routes.Login.route,
+        R.drawable.profile,
+        "Profile"
+    )
 
     companion object {
         val items = listOf(Home, New, SignIn)

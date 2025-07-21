@@ -6,6 +6,7 @@ import hr.tvz.android.chatapp.data.model.Conversation
 import hr.tvz.android.chatapp.network.AuthHttpClient
 import hr.tvz.android.chatapp.network.NoAuthHttpClient
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
@@ -22,22 +23,21 @@ class ConversationRepository @Inject constructor(
     @AuthHttpClient private val authHttpClient: HttpClient,
     @NoAuthHttpClient private val noAuthHttpClient: HttpClient
 ) {
-    private val baseUrl = "${BuildConfig.SERVER_IP}/api/conversations"
+    private val baseUrl = "http://${BuildConfig.SERVER_IP}/api/conversations"
 
-    suspend fun getConversation(
-        conversationId: String,
-        currentUserId: String
-    ): Conversation {
+    suspend fun getConversation(conversationId: String, currentUserId: String): Conversation {
         val response: HttpResponse = authHttpClient.get(
-            urlString = "$baseUrl/get/$conversationId/$currentUserId"
+            urlString = "${baseUrl}/get/${conversationId}/${currentUserId}"
         ) {
             contentType(ContentType.Application.Json)
         }
         return when (response.status) {
-            HttpStatusCode.OK -> response.bodyAsText().let { Json.decodeFromString(it) }
+            HttpStatusCode.OK -> response.body()
             else -> throw Exception("Failed to fetch conversation: ${response.status}")
         }
     }
+
+    //ToDo: Add getConversationDto()
 
     suspend fun getAllConversationsByUserId(userId: String): List<ConversationDTO> {
         val response: HttpResponse = authHttpClient.get("$baseUrl/$userId") {
@@ -49,15 +49,13 @@ class ConversationRepository @Inject constructor(
         }
     }
 
-
-
     suspend fun createNewGroupChat(conversation: Conversation) : Conversation {
         val response: HttpResponse = authHttpClient.post("$baseUrl/create_group") {
             contentType(ContentType.Application.Json)
             setBody(conversation)
         }
         return when (response.status) {
-            HttpStatusCode.OK -> response.bodyAsText().let { Json.decodeFromString(it) }
+            HttpStatusCode.OK -> response.body()
             else -> throw Exception("Failed to create group: ${response.status}")
         }
     }

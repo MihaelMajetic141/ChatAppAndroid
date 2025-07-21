@@ -20,8 +20,7 @@ class MessageRepository @Inject constructor(
     @AuthHttpClient private val authHttpClient: HttpClient,
     @NoAuthHttpClient private val noAuthHttpClient: HttpClient,
 ) {
-    private val baseUrl = "${BuildConfig.SERVER_IP}api/messages"
-
+    private val baseUrl = "http://${BuildConfig.SERVER_IP}/api/messages"
 
     suspend fun getMessagesByConversationId(conversationId: String): List<ChatMessage> {
         val response: HttpResponse = authHttpClient.get("$baseUrl/get") {

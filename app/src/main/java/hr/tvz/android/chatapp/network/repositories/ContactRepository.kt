@@ -21,7 +21,7 @@ class ContactRepository @Inject constructor(
     @AuthHttpClient private val authHttpClient: HttpClient,
     @NoAuthHttpClient private val noAuthHttpClient: HttpClient
 ) {
-    private val baseUrl = "${BuildConfig.SERVER_IP}/api/contacts"
+    private val baseUrl = "http://${BuildConfig.SERVER_IP}/api/contacts"
 
     suspend fun getUserContacts(userId: String): List<ContactDTO> {
         val response = authHttpClient.get("$baseUrl/get") {

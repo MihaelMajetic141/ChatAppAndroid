@@ -11,5 +11,5 @@ data class ConversationDTO(
     val lastMessage: String?,
     @Serializable(with = InstantSerializer::class)
     val lastMessageDate: Instant?,
-    val imageFileId: String = ""
+    val imageFileId: String?
 )

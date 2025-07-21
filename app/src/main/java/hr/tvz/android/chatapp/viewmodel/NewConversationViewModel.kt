@@ -1,6 +1,7 @@
 package hr.tvz.android.chatapp.viewmodel
 
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -10,6 +11,7 @@ import hr.tvz.android.chatapp.data.model.Conversation
 import hr.tvz.android.chatapp.network.repositories.ContactRepository
 import hr.tvz.android.chatapp.network.repositories.ConversationRepository
 import hr.tvz.android.chatapp.network.repositories.MediaRepository
+import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -25,25 +27,30 @@ class NewConversationViewModel @Inject constructor(
     private val mediaRepository: MediaRepository
 ): ViewModel() {
 
-    private val _loadContactsViewState = MutableStateFlow<LoadContactsViewState>(LoadContactsViewState.Loading)
+    private val _loadContactsViewState = MutableStateFlow<LoadContactsViewState>(
+        value = LoadContactsViewState.Loading)
     val loadContactsViewState = _loadContactsViewState.asStateFlow()
 
-    private val _loadConversationsViewState = MutableStateFlow<LoadConversationsViewState>(LoadConversationsViewState.Loading)
+    private val _loadConversationsViewState = MutableStateFlow<LoadConversationsViewState>(
+        value = LoadConversationsViewState.Loading)
     val loadConversationsViewState = _loadConversationsViewState.asStateFlow()
 
-    private val _createContactViewState = MutableStateFlow<CreateContactViewState>(CreateContactViewState.Loading)
+    private val _createContactViewState = MutableStateFlow<CreateContactViewState>(
+        value = CreateContactViewState.Loading)
     val createContactViewState = _createContactViewState.asStateFlow()
 
-    private val _createGroupViewState = MutableStateFlow<CreateGroupViewState>(CreateGroupViewState.Loading)
+    private val _createGroupViewState = MutableStateFlow<CreateGroupViewState>(
+        value = CreateGroupViewState.Loading)
     val createGroupViewState = _createGroupViewState.asStateFlow()
 
-    private val _createDMViewState = MutableStateFlow<CreateDMViewState>(CreateDMViewState.Loading)
+    private val _createDMViewState = MutableStateFlow<CreateDMViewState>(
+        value = CreateDMViewState.Loading)
     val createDMViewState = _createDMViewState.asStateFlow()
 
-    private val _selectedContacts = MutableStateFlow<List<ContactDTO>>(emptyList())
+    private val _selectedContacts = MutableStateFlow<List<ContactDTO>>(value = emptyList())
     val selectedContacts = _selectedContacts.asStateFlow()
 
-    private val _groupName = MutableStateFlow("")
+    private val _groupName = MutableStateFlow(value = "")
     val groupName = _groupName.asStateFlow()
 
     private val _groupImageUri = MutableStateFlow<Uri?>(Uri.EMPTY)
@@ -124,21 +131,21 @@ class NewConversationViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _createGroupViewState.update { CreateGroupViewState.Loading }
-                val imageFileId = mediaRepository.uploadMedia(groupImage ?: Uri.EMPTY)
+                val imageMetadata = mediaRepository.uploadMedia(groupImage ?: Uri.EMPTY)
                 val conversation = Conversation(
-                    id = "",
                     name = groupName,
-                    imageFileId = imageFileId,
-                    memberIds = groupMemberIds,
-                    isDirectMessage = false,
                     description = "",
-                    inviteLink = "",
+                    imageFileId = imageMetadata.id,
+                    isDirectMessage = false,
                     adminIds = adminIds,
+                    memberIds = groupMemberIds,
                     createdAt = Instant.now(),
                 )
+                Log.d("convBeforePost", conversation.toString())
                 val newConversation = conversationRepository.createNewGroupChat(conversation)
+                Log.d("tag", newConversation.toString())
                 _createGroupViewState.update {
-                    CreateGroupViewState.Success(newConversation.id ?: "")
+                    CreateGroupViewState.Success(groupId = newConversation.id ?: "")
                 }
             } catch (e: Exception) {
                 _createGroupViewState.update {

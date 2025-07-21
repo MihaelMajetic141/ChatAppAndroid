@@ -24,7 +24,7 @@ class AuthRepository @Inject constructor(
     @AuthHttpClient private val authHttpClient: HttpClient,
     @NoAuthHttpClient private val noAuthHttpClient: HttpClient
 ) {
-    private val baseUrl = "${BuildConfig.SERVER_IP}/api/auth"
+    private val baseUrl = "http://${BuildConfig.SERVER_IP}/api/auth"
 
     suspend fun login(loginRequest: LoginRequest): AuthResponse {
         val response = noAuthHttpClient.post(urlString = "$baseUrl/login") {

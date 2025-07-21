@@ -60,7 +60,6 @@ import hr.tvz.android.chatapp.viewmodel.NewConversationViewModel
 @Composable
 fun CreateContactScreen(
     navController: NavController,
-    topAppBarState: MutableState<TopAppBarState>,
     newConversationViewModel: NewConversationViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -131,7 +130,8 @@ fun CreateContactScreen(
                     }
                     LazyColumn(modifier = Modifier
                         .fillMaxWidth()
-                        .padding(10.dp)) {
+                        .padding(10.dp)
+                    ) {
                         contacts.forEach() {
                             item {
                                 Row(modifier = Modifier

@@ -8,10 +8,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -32,6 +36,8 @@ import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -39,9 +45,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSearchBarState
@@ -59,12 +67,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import coil.compose.rememberAsyncImagePainter
+import hr.tvz.android.chatapp.BottomNavItem
+import hr.tvz.android.chatapp.R
 import hr.tvz.android.chatapp.TopAppBarState
 import hr.tvz.android.chatapp.data.dto.ContactDTO
 import hr.tvz.android.chatapp.data.routes.Routes
@@ -77,11 +91,9 @@ import hr.tvz.android.chatapp.viewmodel.NewConversationViewModel
 @Composable
 fun CreateGroupScreen(
     navController: NavController,
-    topAppBarState: MutableState<TopAppBarState>,
     newConversationViewModel: NewConversationViewModel = hiltViewModel(),
 ) {
-    val context = LocalContext.current
-    val dataStore = DataStoreManager(context)
+    val dataStore = DataStoreManager(LocalContext.current)
     val currentUserId by dataStore.userId.collectAsState("")
 
     val loadContactsViewState by newConversationViewModel.loadContactsViewState.collectAsState()
@@ -122,7 +134,7 @@ fun CreateGroupScreen(
                         showSearchBar = showSearchBar,
                         searchQuery = searchQuery,
                         contacts = contacts,
-                        navController = navController
+                        onBackClick = { navController.popBackStack() }
                     )
                     CreateGroupInputFields(
                         newConversationViewModel = newConversationViewModel,
@@ -132,7 +144,8 @@ fun CreateGroupScreen(
                         selectedContacts = selectedGroupMembers,
                         onRemoveContact = { contact ->
                             newConversationViewModel.removeContactFromList(contact)
-                        }
+                        },
+                        modifier = Modifier.padding(top = 5.dp)
                     )
                     ContactsLazyRow(
                         contacts = contacts,
@@ -147,29 +160,28 @@ fun CreateGroupScreen(
                     modifier = Modifier
                         .size(50.dp)
                         .align(Alignment.BottomEnd)
-                        .offset((-25).dp, (-75).dp),
+                        .offset((-25).dp, (-85).dp),
                     onClick = {
                         if (groupName.isNotEmpty() && selectedGroupMembers.isNotEmpty()) {
                             newConversationViewModel.createGroup(
                                 groupName = groupName,
                                 groupImage = groupImageUri,
-                                groupMemberIds = selectedGroupMembers.map { it.userInfoId },
-                                adminIds = listOf<String>(currentUserId ?: "")
+                                groupMemberIds = (selectedGroupMembers.map { it.userInfoId })
+                                        + listOfNotNull(currentUserId),
+                                adminIds = listOfNotNull(currentUserId)
                             )
                         } else {
-                            showErrorPopUp.value = true
+                            navController.navigate(Routes.NewConversation.route) {
+                                popUpTo(0)
+                            }
                         }
-                    },
+                    }
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, "Create group icon")
-                }
-                PopupBox(
-                    popupWidth = 200f,
-                    popupHeight = 100f,
-                    showPopup = showErrorPopUp.value,
-                    onClickOutside = { showErrorPopUp.value = false }
-                ) {
-                    Text("Group name and group members must not be empty!")
+                    if (groupName.isNotEmpty() && selectedGroupMembers.isNotEmpty()) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, "Create group icon")
+                    } else {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Navigate back icon")
+                    }
                 }
             }
         }
@@ -180,6 +192,18 @@ fun CreateGroupScreen(
     }
     when(createGroupViewState) {
         is CreateGroupViewState.Error -> {
+            AnimatedVisibility(
+                visible = showErrorPopUp.value
+            ) {
+                BasicAlertDialog(
+                    onDismissRequest = { showErrorPopUp.value = false },
+                    modifier = Modifier,
+                    properties = DialogProperties(),
+                    content = {
+                        Text((createGroupViewState as CreateGroupViewState.Error).message)
+                    }
+                )
+            }
             Text("Error: " +
                     (createGroupViewState as CreateGroupViewState.Error).message)
         }
@@ -210,7 +234,7 @@ fun TopBarWithContactSearch(
     showSearchBar: MutableState<Boolean>,
     searchQuery: MutableState<String>,
     contacts: List<ContactDTO>,
-    navController: NavController
+    onBackClick: () -> Unit
 ) {
     AnimatedVisibility(visible = !showSearchBar.value) {
         TopAppBar(
@@ -219,7 +243,7 @@ fun TopBarWithContactSearch(
             },
             navigationIcon = {
                 IconButton(
-                    onClick = { navController.navigate(0) }
+                    onClick = { onBackClick() }
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -297,39 +321,42 @@ fun ImageInput(
 ) {
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
 
-    val launcher = rememberLauncherForActivityResult(
+    val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri: Uri? ->
             uri?.let {
                 selectedImageUri = it
-                onImageSelected(it) // Notify parent of the selected URI
+                onImageSelected(it)
             }
         }
     )
 
     AnimatedVisibility(selectedImageUri != null) {
-        selectedImageUri?.let { uri ->
-            IconButton(
-                onClick = { launcher.launch("image/*") },
-                modifier = modifier.size(75.dp)
-            ) {
-                Image(
-                    painter = rememberAsyncImagePainter(data),
-                    contentDescription = "Selected Image",
-                )
-            }
+        IconButton(
+            onClick = { galleryLauncher.launch("image/*") },
+            modifier = modifier.size(75.dp)
+        ) {
+            Image(
+                painter = rememberAsyncImagePainter(selectedImageUri),
+                contentDescription = "Selected Image",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .aspectRatio(1f)
+                    .clip(CircleShape)
+            )
         }
     }
 
     AnimatedVisibility(selectedImageUri == null) {
         IconButton(
-            onClick = { launcher.launch("image/*") },
+            onClick = { galleryLauncher.launch("image/*") },
             modifier = modifier.size(100.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.AccountCircle,
+            Image(
+                painter = painterResource(R.drawable.user),
                 contentDescription = "Select group image",
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.size(100.dp)
             )
         }
     }
@@ -344,17 +371,20 @@ fun CreateGroupInputFields(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Start,
-        modifier = Modifier.fillMaxWidth().height(50.dp)
+        modifier = Modifier.height(80.dp)
     ) {
         ImageInput(
             onImageSelected = { uri -> newConversationViewModel.setGroupImage(uri) },
-            modifier = Modifier.fillMaxHeight()
+            modifier = Modifier.padding(5.dp)
         )
         OutlinedTextField(
             value = groupName,
             onValueChange = { newConversationViewModel.setGroupName(it) },
             label = { Text("Group name") },
-            modifier = Modifier.fillMaxSize()
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(5.dp)
         )
     }
 }
@@ -362,13 +392,18 @@ fun CreateGroupInputFields(
 @Composable
 fun SelectedContactsRow(
     selectedContacts: List<ContactDTO>,
-    onRemoveContact: (ContactDTO) -> Unit
+    onRemoveContact: (ContactDTO) -> Unit,
+    modifier: Modifier
 ) {
     AnimatedVisibility(visible = selectedContacts.isNotEmpty()) {
         LazyRow {
             items(selectedContacts) { contact ->
-                Box(contentAlignment = Alignment.TopEnd) {
-                    Column(Modifier.padding(horizontal = 10.dp)) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .defaultMinSize(minWidth = 33.dp)
+                ) {
 //                            SubcomposeAsyncImage(
 //                                model = "${BuildConfig.SERVER_IP}/api/media/${contact.imageFileId}",
 //                                contentDescription = "Contact image",
@@ -380,21 +415,22 @@ fun SelectedContactsRow(
 //                                    .padding(8.dp)
 //                                    .background(MaterialTheme.colorScheme.primary, CircleShape)
 //                            )
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
+                    Box(contentAlignment = Alignment.TopEnd) {
+                        Image(
+                            painter = painterResource(R.drawable.user),
                             contentDescription = "",
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .align(Alignment.CenterHorizontally)
                                 .clickable { onRemoveContact(contact) }
                         )
-                        Text(contact.username)
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Remove selected contact",
+                            modifier = Modifier.size(10.dp)
+                        )
                     }
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Remove selected contact",
-                    )
+                    Text(contact.username)
                 }
             }
         }
@@ -405,7 +441,7 @@ fun SelectedContactsRow(
 fun ContactsLazyRow(
     contacts: List<ContactDTO>,
     selectedContacts: List<ContactDTO>,
-    onToggleContact: (ContactDTO) -> Unit
+    onToggleContact: (ContactDTO) -> Unit,
 ) {
     LazyColumn {
         contacts.forEach() { contact ->
@@ -420,8 +456,8 @@ fun ContactsLazyRow(
                         else Color.Transparent
                     )
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.AccountCircle,
+                    Image(
+                        painter = painterResource(R.drawable.user),
                         contentDescription = "",
                         modifier = Modifier
                             .size(40.dp)
@@ -450,7 +486,6 @@ fun ContactsLazyRow(
 @Preview
 @Composable
 fun CreateGroupScreenPreview() {
-
     val selectedContacts = remember { mutableStateListOf<String>() }
     val allContacts = remember {
         mutableStateListOf<String>().apply {
@@ -465,24 +500,24 @@ fun CreateGroupScreenPreview() {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Start,
-                modifier = Modifier.fillMaxWidth().height(50.dp)
+                modifier = Modifier.height(50.dp)
             ) {
                 ImageInput(
                     onImageSelected = {  },
-                    modifier = Modifier.fillMaxHeight()
+                    modifier = Modifier
                 )
                 OutlinedTextField(
                     value = "",
                     onValueChange = {  },
                     label = { Text("Group name") },
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
                 )
             }
 
             AnimatedVisibility(visible = selectedContacts.isNotEmpty()) {
                 Row {
                     selectedContacts.forEach() { contact ->
-                        Column(Modifier.padding(horizontal = 10.dp)) {
+                        Column(Modifier.padding(10.dp)) {
                             Icon(
                                 imageVector = Icons.Default.AccountCircle,
                                 contentDescription = "",

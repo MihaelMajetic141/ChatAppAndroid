@@ -24,7 +24,7 @@ class ChatListViewModel @Inject constructor(
             val conversationDTOs = conversationRepository.getAllConversationsByUserId(userId)
             if (conversationDTOs.isEmpty()) {
                 _viewState.update {
-                    ChatListViewState.Empty("No chat groups available.")
+                    ChatListViewState.Empty("No conversations.")
                 }
             } else {
                 _viewState.update { ChatListViewState.Success(conversationDTOs) }

@@ -1,6 +1,7 @@
 package hr.tvz.android.chatapp.network
 
 import android.content.Context
+import android.util.Log
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -51,7 +52,7 @@ annotation class NoAuthHttpClient
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-    private const val BASE_URL = BuildConfig.SERVER_IP
+    private const val BASE_URL = "http://${BuildConfig.SERVER_IP}"
 
     @Provides
     @Singleton
@@ -97,7 +98,11 @@ object NetworkModule {
                 json(Json { ignoreUnknownKeys = true })
             }
             install(Logging) {
-                logger = Logger.DEFAULT
+                logger = object : Logger {
+                    override fun log(message: String) {
+                        Log.d("KtorHttpClient", message)
+                    }
+                }
                 level = LogLevel.ALL
             }
             install(Auth) {
