@@ -20,7 +20,16 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField(type = "String", name = "SERVER_IP", value = "\"${project.findProperty("SERVER_IP")}\"")
+        buildConfigField(
+            type = "String",
+            name = "SERVER_IP",
+            value = "\"${project.findProperty("SERVER_IP")}\""
+        )
+        buildConfigField(
+            type = "String",
+            name = "WEBSOCKET_URL",
+            value = "\"${project.findProperty("WEBSOCKET_URL")}\""
+        )
     }
 
     buildTypes {
